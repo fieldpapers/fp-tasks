@@ -22,6 +22,7 @@
     "morgan": "^1.5.3",
     "raven": "^0.7.3",
     "request": "^2.55.0",
+    "require-env": "0.0.4",
     "response-time": "^2.3.1",
     "tmp": "0.0.26"
   }
