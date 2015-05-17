@@ -8,6 +8,10 @@ RUN \
   apt-get clean
 
 RUN \
+  apt-get install -y imagemagick && \
+  apt-get clean
+
+RUN \
   apt-get install -y apt-transport-https curl lsb-release && \
   curl -sf https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add - && \
   echo "deb https://deb.nodesource.com/iojs_2.x $(lsb_release -c -s) main" > /etc/apt/sources.list.d/nodesource.list && \
