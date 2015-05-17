@@ -1,19 +1,19 @@
 #!/usr/bin/env node
+/*eslint camelcase:0 no-process-exit:0*/
 "use strict";
 
 const assert = require("assert"),
   util = require("util");
 
 const bodyParser = require("body-parser"),
+  changeCase = require("change-case"),
   express = require("express"),
   morgan = require("morgan"),
   raven = require("raven"),
   request = require("request"),
   responseTime = require("response-time");
 
-const mergePages = require("./lib/tasks/merge_pages"),
-  renderIndex = require("./lib/tasks/render_index"),
-  renderPage = require("./lib/tasks/render_page");
+const tasks = require("./lib/tasks");
 
 const app = express().disable("x-powered-by"),
   sentry = new raven.Client();
@@ -29,7 +29,6 @@ if (process.env.SENTRY_DSN) {
     console.log("Uncaught error. Reporting to Sentry and exiting.");
     console.error(err.stack);
 
-    /*eslint no-process-exit:0*/
     process.exit(1);
   });
 
@@ -44,184 +43,56 @@ app.get("/", function(req, res, next) {
   return next();
 });
 
-app.put("/merge_pages", function(req, res) {
-  const payload = req.body;
 
-  // validation
-  // TODO validate payload using JSON schemas (https://github.com/tdegrunt/jsonschema)
-  try {
-    assert.equal("merge_pages", payload.task, util.format("Task ('%s') does not match endpoint (merge_pages).", payload.task));
-    assert.ok(payload.atlas, "Payload must include an 'atlas'.");
-    assert.ok(payload.callback_url, "Payload must include 'callback_url'.");
-  } catch (err) {
-    return res.status(400).json({
-      error: err.message
-    });
-  }
+Object.keys(tasks).forEach(function(name) {
+  const snake = changeCase.snake(name),
+    task = tasks[name];
 
-  // fire and forget
-  mergePages(payload.atlas, function(err, atlasUrl) {
-    const responsePayload = {
-      task: payload.task,
-      atlas: {
-        slug: payload.atlas.slug
+  app.put(util.format("/%s", snake), function(req, res) {
+    const payload = req.body,
+      callbackUrl = payload.callback_url;
+
+    // validation
+    try {
+      assert.equal(snake, payload.task, util.format("Task ('%s') does not match endpoint (%s).", payload.task, snake));
+      assert.ok(callbackUrl, "Payload must include 'callback_url'.");
+
+      if (task.validate) {
+        // TODO validate payload using JSON schemas (https://github.com/tdegrunt/jsonschema)
+        task.validate(payload);
       }
-    };
-
-    if (err) {
-      console.warn(err.stack);
-      sentry.captureError(err);
-
-      responsePayload.error = {
-        message: err.message,
-        stack: err.stack
-      };
-    } else {
-      /*eslint camelcase:0*/
-      responsePayload.atlas.pdf_url = atlasUrl;
+    } catch (err) {
+      return res.status(400).json({
+        error: err.message
+      });
     }
 
-    return request.post({
-      body: responsePayload,
-      json: true,
-      uri: payload.callback_url
-    }, function(err, rsp, body) {
+    // fire and forget
+    task(payload, function(err, rsp) {
       if (err) {
-        console.warn(err);
-        sentry.captureError(err);
-        return;
+        return console.error(err.stack);
       }
 
-      if (rsp.statusCode < 200 || rsp.statusCode >= 300) {
-        console.warn("%s returned %d: %s", payload.callback_url, rsp.statusCode, body);
-        sentry.captureMessage(util.format("%s returned %d: %s", payload.callback_url, rsp.statusCode, body));
-      }
-    });
-  });
-
-  return res.status(202).send();
-});
-
-app.put("/render_index", function(req, res) {
-  const payload = req.body;
-
-  // validation
-  // TODO validate payload using JSON schemas (https://github.com/tdegrunt/jsonschema)
-  try {
-    assert.equal("render_index", payload.task, util.format("Task ('%s') does not match endpoint (render_index).", payload.task));
-    assert.ok(payload.page, "Payload must include a 'page'.");
-    assert.ok(payload.callback_url, "Payload must include 'callback_url'.");
-  } catch (err) {
-    return res.status(400).json({
-      error: err.message
-    });
-  }
-
-  // fire and forget
-  renderIndex(payload.page, function(err, pageUrl) {
-    const responsePayload = {
-      task: payload.task,
-      page: {
-        page_number: payload.page.page_number,
-        atlas: {
-          slug: payload.page.atlas.slug
+      return request.post({
+        body: rsp,
+        json: true,
+        uri: callbackUrl
+      }, function(err, rsp, body) {
+        if (err) {
+          console.warn(err);
+          sentry.captureError(err);
+          return;
         }
-      }
-    };
 
-    if (err) {
-      console.warn(err.stack);
-      sentry.captureError(err);
-
-      responsePayload.error = {
-        message: err.message,
-        stack: err.stack
-      };
-    } else {
-      /*eslint camelcase:0*/
-      responsePayload.page.pdf_url = pageUrl;
-    }
-
-    return request.post({
-      body: responsePayload,
-      json: true,
-      uri: payload.callback_url
-    }, function(err, rsp, body) {
-      if (err) {
-        console.warn(err);
-        sentry.captureError(err);
-        return;
-      }
-
-      if (rsp.statusCode < 200 || rsp.statusCode >= 300) {
-        console.warn("%s returned %d: %s", payload.callback_url, rsp.statusCode, body);
-        sentry.captureMessage(util.format("%s returned %d: %s", payload.callback_url, rsp.statusCode, body));
-      }
-    });
-  });
-
-  return res.status(202).send();
-});
-
-app.put("/render_page", function(req, res) {
-  const payload = req.body;
-
-  // validation
-  // TODO validate payload using JSON schemas (https://github.com/tdegrunt/jsonschema)
-  try {
-    assert.equal("render_page", payload.task, util.format("Task ('%s') does not match endpoint (render_page).", payload.task));
-    assert.ok(payload.page, "Payload must include a 'page'.");
-    assert.ok(payload.callback_url, "Payload must include 'callback_url'.");
-  } catch (err) {
-    return res.status(400).json({
-      error: err.message
-    });
-  }
-
-  // fire and forget
-  renderPage(payload.page, function(err, pageUrl) {
-    const responsePayload = {
-      task: payload.task,
-      page: {
-        page_number: payload.page.page_number,
-        atlas: {
-          slug: payload.page.atlas.slug
+        if (rsp.statusCode < 200 || rsp.statusCode >= 300) {
+          console.warn("%s returned %d: %s", callbackUrl, rsp.statusCode, body);
+          sentry.captureMessage(util.format("%s returned %d: %s", callbackUrl, rsp.statusCode, body));
         }
-      }
-    };
-
-    if (err) {
-      console.warn(err.stack);
-      sentry.captureError(err);
-
-      responsePayload.error = {
-        message: err.message,
-        stack: err.stack
-      };
-    } else {
-      /*eslint camelcase:0*/
-      responsePayload.page.pdf_url = pageUrl;
-    }
-
-    return request.post({
-      body: responsePayload,
-      json: true,
-      uri: payload.callback_url
-    }, function(err, rsp, body) {
-      if (err) {
-        console.warn(err);
-        sentry.captureError(err);
-        return;
-      }
-
-      if (rsp.statusCode < 200 || rsp.statusCode >= 300) {
-        console.warn("%s returned %d: %s", payload.callback_url, rsp.statusCode, body);
-        sentry.captureMessage(util.format("%s returned %d: %s", payload.callback_url, rsp.statusCode, body));
-      }
+      });
     });
-  });
 
-  return res.status(202).send();
+    return res.status(202).send();
+  });
 });
 
 app.listen(process.env.PORT || 8080, function() {
