@@ -1,0 +1,40 @@
+{
+  "env": {
+    "node": true,
+    "mocha": true,
+    "es6": true
+  },
+  "globals": {
+    "Promise": true
+  },
+  "rules": {
+    "eqeqeq": [2, "smart"],
+    "curly": 2,
+    "quotes": [2, "double", "avoid-escape"],
+    "block-scoped-var": 2,
+    "no-else-return": 2,
+    "no-self-compare": 2,
+    "no-void": 2,
+    "no-warning-comments": 1,
+    "global-strict": 2,
+    "no-mixed-requires": [1, true],
+    "no-sync": 1,
+    "brace-style": 2,
+    "comma-style": 2,
+    "no-lonely-if": 2,
+    "no-multiple-empty-lines": 2,
+    "no-nested-ternary": 2,
+    "no-ternary": 2,
+    "no-underscore-dangle": 0,
+    "padded-blocks": [2, "never"],
+    "quote-props": [2, "as-needed"],
+    "space-after-function-name": [2, "never"],
+    "space-after-keywords": [2, "always"],
+    "space-before-blocks": [2, "always"],
+    "space-in-parens": [2, "never"],
+    "spaced-line-comment": 2,
+    "no-var": 2,
+    "consistent-return": 0,
+    "no-shadow": 0
+  }
+}
