@@ -70,6 +70,7 @@ Object.keys(tasks).forEach(function(name) {
     // fire and forget
     task(payload, function(err, rsp) {
       if (err) {
+        sentry.captureError(err);
         return console.error(err.stack);
       }
 
