@@ -3,9 +3,11 @@
 "use strict";
 
 const assert = require("assert"),
+  os = require("os"),
   util = require("util");
 
-const bodyParser = require("body-parser"),
+const async = require("async"),
+  bodyParser = require("body-parser"),
   changeCase = require("change-case"),
   express = require("express"),
   morgan = require("morgan"),
@@ -17,6 +19,10 @@ const tasks = require("./lib/tasks");
 
 const app = express().disable("x-powered-by"),
   sentry = new raven.Client();
+
+const taskQueue = async.queue(function(task, callback) {
+  return task(callback);
+}, os.cpus().length);
 
 if (process.env.NODE_ENV !== "production") {
   app.use(morgan("dev"));
@@ -43,7 +49,6 @@ app.get("/", function(req, res, next) {
   return next();
 });
 
-
 Object.keys(tasks).forEach(function(name) {
   const snake = changeCase.snake(name),
     task = tasks[name];
@@ -67,28 +72,32 @@ Object.keys(tasks).forEach(function(name) {
       });
     }
 
-    // fire and forget
-    task(payload, function(err, rsp) {
-      if (err) {
-        sentry.captureError(err);
-        return console.error(err.stack);
-      }
-
-      return request.post({
-        body: rsp,
-        json: true,
-        uri: callbackUrl
-      }, function(err, rsp, body) {
+    // queue the task
+    taskQueue.push(function(callback) {
+      return task(payload, function(err, rsp) {
         if (err) {
-          console.warn(err);
           sentry.captureError(err);
-          return;
+          return console.error(err.stack);
         }
 
-        if (rsp.statusCode < 200 || rsp.statusCode >= 300) {
-          console.warn("%s returned %d: %s", callbackUrl, rsp.statusCode, body);
-          sentry.captureMessage(util.format("%s returned %d: %s", callbackUrl, rsp.statusCode, body));
-        }
+        return request.patch({
+          body: rsp,
+          headers: {
+            Accept: "application/json"
+          },
+          json: true,
+          uri: callbackUrl
+        }, function(err, rsp, body) {
+          if (err) {
+            console.warn(err);
+            sentry.captureError(err);
+          } else if (rsp.statusCode < 200 || rsp.statusCode >= 300) {
+            console.warn("%s returned %d: %s", callbackUrl, rsp.statusCode, body);
+            sentry.captureMessage(util.format("%s returned %d: %s", callbackUrl, rsp.statusCode, body));
+          }
+
+          return callback();
+        });
       });
     });
 
