@@ -1,3 +1,4 @@
+NAME = fieldpapers/tasks
 VERSION ?= latest
 
 default:
@@ -5,7 +6,10 @@ default:
 	  -p 8080:8080 \
 	  -v $$(pwd):/app \
 	  --env-file .env \
-	  fieldpapers/tasks
+	  $(NAME):$(VERSION)
 
 image:
-	docker build -t fieldpapers/tasks:$(VERSION) .
+	docker build --rm -t $(NAME):$(VERSION) .
+
+publish-image:
+	docker push $(NAME):$(VERSION)
