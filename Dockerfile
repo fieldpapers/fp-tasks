@@ -12,9 +12,9 @@ RUN \
   apt-get clean
 
 RUN \
-  apt-get install -y apt-transport-https curl lsb-release && \
-  curl -sf https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add - && \
-  echo "deb https://deb.nodesource.com/iojs_2.x $(lsb_release -c -s) main" > /etc/apt/sources.list.d/nodesource.list && \
+  apt-get install -y software-properties-common apt-transport-https curl lsb-release && \
+  add-apt-repository "deb https://deb.nodesource.com/iojs_2.x $(lsb_release -c -s) main" && \
+  (curl -s https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -) && \
   apt-get update && \
   apt-get install -y iojs && \
   apt-get clean
