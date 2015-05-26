@@ -8,8 +8,11 @@ RUN \
   apt-get clean
 
 RUN \
-  apt-get install -y imagemagick && \
+  apt-get install -y imagemagick libnss-mdns && \
   apt-get clean
+
+RUN \
+  sed -i -e 's/#enable-dbus=yes/enable-dbus=no/' /etc/avahi/avahi-daemon.conf
 
 RUN \
   apt-get install -y software-properties-common apt-transport-https curl lsb-release && \
@@ -19,10 +22,6 @@ RUN \
   apt-get install -y iojs && \
   apt-get clean
 
-RUN \
-  useradd -d /app -m fieldpapers
-
-USER fieldpapers
 ENV HOME /app
 ENV PORT 8080
 WORKDIR /app
@@ -34,7 +33,7 @@ RUN \
 
 ADD . /app/
 
-VOLUME ["/app"]
+VOLUME /app
 EXPOSE 8080
 
-CMD npm start
+CMD avahi-daemon -D && npm start
