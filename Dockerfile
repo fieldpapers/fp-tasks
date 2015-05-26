@@ -12,7 +12,9 @@ RUN \
   apt-get clean
 
 RUN \
-  sed -i -e 's/#enable-dbus=yes/enable-dbus=no/' /etc/avahi/avahi-daemon.conf
+  sed -i -e 's/#enable-dbus=yes/enable-dbus=no/' /etc/avahi/avahi-daemon.conf && \
+  sed -i -e 's/rlimit-nproc=3//' /etc/avahi/avahi-daemon.conf
+
 
 RUN \
   apt-get install -y software-properties-common apt-transport-https curl lsb-release && \
