@@ -1,4 +1,4 @@
-FROM fieldpapers/paper
+FROM fieldpapers/paper:v0.1.0
 
 ENV DEBIAN_FRONTEND noninteractive
 
