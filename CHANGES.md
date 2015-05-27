@@ -1,5 +1,9 @@
 # Change Log
 
+## v0.2.2 - 5/26/16
+
+* Shim around ModestMaps warts
+
 ## v0.2.1 - 5/26/15
 
 * Work around `rlimit-nproc` limitations when running without user namespaces
