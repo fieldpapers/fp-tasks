@@ -1,5 +1,10 @@
 # Change Log
 
+## v0.3.0 - 5/26/16
+
+* Additional ModestMaps shimming
+* Propagate atlas text
+
 ## v0.2.2 - 5/26/16
 
 * Shim around ModestMaps warts
