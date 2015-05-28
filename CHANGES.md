@@ -1,5 +1,9 @@
 # Change Log
 
+## v0.3.3 - 5/27/15
+
+* Upload atlases into `atlases/`
+
 ## v0.3.2 - 5/27/15
 
 * Fix typo in render index task
