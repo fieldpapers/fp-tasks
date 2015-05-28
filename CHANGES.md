@@ -1,5 +1,9 @@
 # Change Log
 
+## v0.3.2 - 5/27/15
+
+* Fix typo in render index task
+
 ## v0.3.1 - 5/27/15
 
 * Pass GeoTIFF URLs through `decodeURIComponent` before returning them to the
