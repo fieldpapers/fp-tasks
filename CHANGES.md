@@ -1,11 +1,16 @@
 # Change Log
 
-## v0.3.0 - 5/26/16
+## v0.3.1 - 5/27/15
+
+* Pass GeoTIFF URLs through `decodeURIComponent` before returning them to the
+  app
+
+## v0.3.0 - 5/26/15
 
 * Additional ModestMaps shimming
 * Propagate atlas text
 
-## v0.2.2 - 5/26/16
+## v0.2.2 - 5/26/15
 
 * Shim around ModestMaps warts
 
