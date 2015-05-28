@@ -31,7 +31,8 @@ WORKDIR /app
 ADD package.json /app/
 
 RUN \
-  npm install
+  npm install && \
+  npm cache clean
 
 ADD . /app/
 

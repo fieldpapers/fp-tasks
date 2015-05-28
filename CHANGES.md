@@ -5,6 +5,7 @@
 * Pass GeoTIFF URLs through `decodeURIComponent` before returning them to the
   app
 * Strip extraneous commas from provider URLs
+* Clean npm's cache
 
 ## v0.3.0 - 5/26/15
 
