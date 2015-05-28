@@ -1,8 +1,9 @@
 # Change Log
 
-## v0.3.3 - 5/27/15
+## v0.4.0 - 5/27/15
 
 * Upload atlases into `atlases/`
+* Replace "walking" with "field" in GeoTIFF output filenames
 
 ## v0.3.2 - 5/27/15
 
