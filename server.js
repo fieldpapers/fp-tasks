@@ -92,8 +92,8 @@ Object.keys(tasks).forEach(function(name) {
             console.warn(err);
             sentry.captureError(err);
           } else if (rsp.statusCode < 200 || rsp.statusCode >= 300) {
-            console.warn("%s returned %d: %s", callbackUrl, rsp.statusCode, body);
-            sentry.captureMessage(util.format("%s returned %d: %s", callbackUrl, rsp.statusCode, body));
+            console.warn("%s returned %d:", callbackUrl, rsp.statusCode, body);
+            sentry.captureMessage(util.format("%s returned %d:", callbackUrl, rsp.statusCode, body));
           }
 
           return callback();
