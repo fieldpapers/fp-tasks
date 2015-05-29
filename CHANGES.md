@@ -1,5 +1,9 @@
 # Change Log
 
+## v0.5.2 - 5/28/15
+
+* `page_url` is now correctly snake\_case
+
 ## v0.5.1 - 5/28/15
 
 * Improve logging when callbacks return 500s
