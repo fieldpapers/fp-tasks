@@ -1,5 +1,9 @@
 # Change Log
 
+## v0.5.0 - 5/28/15
+
+* Propagate zoom
+
 ## v0.4.0 - 5/27/15
 
 * Upload atlases into `atlases/`
