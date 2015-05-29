@@ -1,5 +1,10 @@
 # Change Log
 
+## v0.5.3 - 5/29/15
+
+* If a subdomain placeholder is present, replace it with `a` rather than
+  stripping it
+
 ## v0.5.2 - 5/28/15
 
 * `page_url` is now correctly snake\_case
