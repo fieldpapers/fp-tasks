@@ -1,5 +1,9 @@
 # Change Log
 
+## v0.5.1 - 5/28/15
+
+* Improve logging when callbacks return 500s
+
 ## v0.5.0 - 5/28/15
 
 * Propagate zoom
