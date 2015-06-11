@@ -1,5 +1,9 @@
 # Change Log
 
+## v0.6.0 - 6/11/15
+
+* Upgrade fieldpapers/paper to v0.2.0
+
 ## v0.5.3 - 5/29/15
 
 * If a subdomain placeholder is present, replace it with `a` rather than
