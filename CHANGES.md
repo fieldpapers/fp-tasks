@@ -1,5 +1,9 @@
 # Change Log
 
+## v0.6.1 - 6/11/15
+
+* Upgrade fieldpapers/paper to v0.2.1
+
 ## v0.6.0 - 6/11/15
 
 * Upgrade fieldpapers/paper to v0.2.0
