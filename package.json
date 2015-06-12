@@ -18,6 +18,7 @@
     "body-parser": "^1.12.4",
     "change-case": "^2.3.0",
     "clone": "^1.0.2",
+    "debug": "^2.2.0",
     "express": "^4.12.3",
     "holdtime": "^0.1.1",
     "morgan": "^1.5.3",

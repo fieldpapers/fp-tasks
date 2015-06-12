@@ -3,6 +3,7 @@
 ## v0.6.1 - 6/11/15
 
 * Upgrade fieldpapers/paper to v0.2.1
+* Improve debugging capabilities with `debug`.
 
 ## v0.6.0 - 6/11/15
 
