@@ -1,6 +1,6 @@
 {
   "name": "fieldpapers-tasks",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "HTTP-enabled task runner for Field Papers",
   "main": "index.js",
   "author": "Seth Fitzsimmons <seth@mojodna.net>",
