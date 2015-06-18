@@ -1,4 +1,4 @@
-FROM quay.io/fieldpapers/paper:v0.2.1
+FROM quay.io/fieldpapers/paper:v0.3.0
 
 ENV DEBIAN_FRONTEND noninteractive
 

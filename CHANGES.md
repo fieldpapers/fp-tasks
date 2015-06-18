@@ -1,9 +1,13 @@
 # Change Log
 
+## v0.7.0 - 6/17/15
+
+* Upgrade `fieldpapers/paper` to v0.3.0
+
 ## v0.6.1 - 6/11/15
 
 * Upgrade fieldpapers/paper to v0.2.1
-* Improve debugging capabilities with `debug`.
+* Improve debugging capabilities with `debug`
 
 ## v0.6.0 - 6/11/15
 
