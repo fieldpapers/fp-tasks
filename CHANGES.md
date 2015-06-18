@@ -1,5 +1,10 @@
 # Change Log
 
+## v0.8.0 - 6/18/15
+
+* Upgrade `fieldpapers/paper` to v0.4.0
+* Use `read_qr_code` wrapper in place of `zbar` (includes image pre-processing)
+
 ## v0.7.0 - 6/17/15
 
 * Upgrade `fieldpapers/paper` to v0.3.0

@@ -1,4 +1,4 @@
-FROM quay.io/fieldpapers/paper:v0.3.0
+FROM quay.io/fieldpapers/paper:v0.4.0
 
 ENV DEBIAN_FRONTEND noninteractive
 
@@ -8,7 +8,7 @@ RUN \
   apt-get clean
 
 RUN \
-  apt-get install -y imagemagick libnss-mdns && \
+  apt-get install -y libnss-mdns && \
   apt-get clean
 
 RUN \
