@@ -4,6 +4,7 @@
 
 * Upgrade `fieldpapers/paper` to v0.4.0
 * Use `read_qr_code` wrapper in place of `zbar` (includes image pre-processing)
+* Remove `avahi-daemon`
 
 ## v0.7.0 - 6/17/15
 
