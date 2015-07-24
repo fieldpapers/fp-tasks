@@ -17,6 +17,7 @@ RUN \
 
 ENV HOME /app
 ENV PORT 8080
+ENV NODE_ENV production
 WORKDIR /app
 
 ADD package.json /app/
