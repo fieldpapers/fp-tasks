@@ -18,6 +18,7 @@ RUN \
 ENV HOME /app
 ENV PORT 8080
 ENV NODE_ENV production
+ENV AWS_REGION us-east-1
 WORKDIR /app
 
 ADD package.json /app/
