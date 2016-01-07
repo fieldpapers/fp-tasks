@@ -4,7 +4,7 @@
 
 This is intended to be run from a Docker image. `-v $(pwd):/app` facilitates
 local development, `--env-file` propagates environment variables into the
-container.
+container.  See `.env.sample` for sample `.env` file.
 
 ```bash
 docker run --rm \
