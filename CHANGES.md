@@ -1,5 +1,9 @@
 # Change Log
 
+## v0.10.0
+
+* Upgrade Node to v5.x
+
 ## v0.9.0 - 6/19/15
 
 * Upgrade `fieldpapers/paper` to v0.5.0
