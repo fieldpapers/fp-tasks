@@ -2,6 +2,8 @@
 
 ## v0.10.0
 
+* Support multiple S3 regions
+* Use `AWS_REGION` instead of `AWS_DEFAULT_REGION`
 * Upgrade Node to v5.x
 
 ## v0.9.0 - 6/19/15
