@@ -28,5 +28,9 @@
     "response-time": "^2.3.1",
     "tmp": "0.0.26",
     "xml2js": "^0.4.8"
+  },
+  "devDependencies": {
+    "babel-eslint": "^4.1.6",
+    "eslint": "^1.10.3"
   }
 }

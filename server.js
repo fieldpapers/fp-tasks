@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/*eslint camelcase:0 no-process-exit:0*/
+/* eslint camelcase:0 no-process-exit:0 */
 "use strict";
 
 const assert = require("assert"),
