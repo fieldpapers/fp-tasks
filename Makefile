@@ -2,7 +2,7 @@ NAME = fieldpapers/tasks
 VERSION ?= latest
 
 default:
-	docker run --rm \
+	docker run -it --rm \
 	  -p 8080:8080 \
 	  -v $$(pwd):/app \
 	  --env-file .env \
