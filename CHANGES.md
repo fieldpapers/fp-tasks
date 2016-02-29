@@ -1,5 +1,11 @@
 # Change Log
 
+## v0.10.1
+
+* Fix error handling when using local persistence
+* Spawn children in their own process group to facilitate proper cleanup
+* Decrease page rendering timeouts to 60s
+
 ## v0.10.0
 
 * Support multiple S3 regions
