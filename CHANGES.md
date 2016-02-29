@@ -1,5 +1,9 @@
 # Change Log
 
+## v0.10.2
+
+* Fix error handling when using s3 persistence
+
 ## v0.10.1
 
 * Fix error handling when using local persistence
