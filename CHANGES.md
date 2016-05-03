@@ -1,5 +1,9 @@
 # Change Log
 
+## v0.11.0
+
+* Upgrade `fieldpapers/paper` to v0.7.0
+
 ## v0.10.2 - 2/29/16
 
 * Fix error handling when using s3 persistence
