@@ -1,16 +1,16 @@
 # Change Log
 
-## v0.10.2
+## v0.10.2 - 2/29/16
 
 * Fix error handling when using s3 persistence
 
-## v0.10.1
+## v0.10.1 - 2/28/16
 
 * Fix error handling when using local persistence
 * Spawn children in their own process group to facilitate proper cleanup
 * Decrease page rendering timeouts to 60s
 
-## v0.10.0
+## v0.10.0 - 2/8/16
 
 * Support multiple S3 regions
 * Use `AWS_REGION` instead of `AWS_DEFAULT_REGION`
