@@ -1,6 +1,11 @@
 # Change Log
 
-## v0.11.0
+## v0.12.0 - 5/3/16
+
+* Downgrade Node to 4.x
+* Pin npm to `~3.6.0` (due to https://github.com/npm/npm/issues/12566)
+
+## v0.11.0 - 5/3/16
 
 * Upgrade `fieldpapers/paper` to v0.7.0
 * Render title above URL

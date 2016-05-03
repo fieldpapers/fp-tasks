@@ -9,11 +9,14 @@ RUN \
 
 RUN \
   apt-get install -y software-properties-common apt-transport-https curl lsb-release && \
-  add-apt-repository "deb https://deb.nodesource.com/node_5.x $(lsb_release -c -s) main" && \
+  add-apt-repository "deb https://deb.nodesource.com/node_4.x $(lsb_release -c -s) main" && \
   (curl -s https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -) && \
   apt-get update && \
   apt-get install -y nodejs && \
   apt-get clean
+
+RUN \
+  npm install -g npm@~3.6.0
 
 ENV HOME /app
 ENV PORT 8080
