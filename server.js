@@ -75,7 +75,7 @@ Object.keys(tasks).forEach(function(name) {
     taskQueue.push(function(callback) {
       return task(payload, function(err, rsp) {
         if (err) {
-          Sentry.captureError(err);
+          Sentry.captureException(err);
           return console.error(err.stack);
         }
 
@@ -89,7 +89,7 @@ Object.keys(tasks).forEach(function(name) {
         }, function(err, rsp, body) {
           if (err) {
             console.warn(err);
-            Sentry.captureError(err);
+            Sentry.captureException(err);
           } else if (rsp.statusCode < 200 || rsp.statusCode >= 300) {
             console.warn("%s returned %d:", callbackUrl, rsp.statusCode, body);
             Sentry.captureMessage(util.format("%s returned %d:", callbackUrl, rsp.statusCode, body));
