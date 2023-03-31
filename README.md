@@ -18,6 +18,9 @@ docker run --rm \
 
 * `AWS_REGION` - AWS region. Required if using S3.
 * `S3_BUCKET_NAME` - S3 bucket name. Required if using S3.
+* `AWS_ACCESS_KEY_ID` - AWS key with read/write access to the configured S3
+  bucket(s).
+* `AWS_SECRET_ACCESS_KEY` - Corresponding secret.
 * `API_BASE_URL` - Base Field Papers API URL (used when generating QR codes and
   titles). Defaults to `https://fieldpapers.org/`.
 * `PERSIST` - File persistence. Can be `local` or `s3`. Defaults to `s3`.
