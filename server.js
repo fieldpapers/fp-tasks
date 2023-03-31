@@ -11,14 +11,13 @@ const async = require("async"),
   changeCase = require("change-case"),
   express = require("express"),
   morgan = require("morgan"),
-  raven = require("raven"),
+  Sentry = require("@sentry/node"),
   request = require("request"),
   responseTime = require("response-time");
 
 const tasks = require("./lib/tasks");
 
-const app = express().disable("x-powered-by"),
-  sentry = new raven.Client();
+const app = express().disable("x-powered-by");
 
 const taskQueue = async.queue(function(task, callback) {
   return task(callback);
@@ -31,14 +30,14 @@ if (process.env.NODE_ENV !== "production") {
 app.use(responseTime());
 
 if (process.env.SENTRY_DSN) {
-  raven.patchGlobal(function(logged, err) {
+  Sentry.patchGlobal(function(logged, err) {
     console.log("Uncaught error. Reporting to Sentry and exiting.");
     console.error(err.stack);
 
     process.exit(1);
   });
 
-  app.use(raven.middleware.express());
+  app.use(Sentry.middleware.express());
 }
 
 app.use(bodyParser.json());
@@ -76,7 +75,7 @@ Object.keys(tasks).forEach(function(name) {
     taskQueue.push(function(callback) {
       return task(payload, function(err, rsp) {
         if (err) {
-          sentry.captureError(err);
+          Sentry.captureError(err);
           return console.error(err.stack);
         }
 
@@ -90,10 +89,10 @@ Object.keys(tasks).forEach(function(name) {
         }, function(err, rsp, body) {
           if (err) {
             console.warn(err);
-            sentry.captureError(err);
+            Sentry.captureError(err);
           } else if (rsp.statusCode < 200 || rsp.statusCode >= 300) {
             console.warn("%s returned %d:", callbackUrl, rsp.statusCode, body);
-            sentry.captureMessage(util.format("%s returned %d:", callbackUrl, rsp.statusCode, body));
+            Sentry.captureMessage(util.format("%s returned %d:", callbackUrl, rsp.statusCode, body));
           }
 
           return callback();
