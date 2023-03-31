@@ -7,16 +7,16 @@ RUN \
   apt-get upgrade -y && \
   apt-get clean
 
-RUN \
-  apt-get install -y software-properties-common apt-transport-https curl lsb-release && \
-  add-apt-repository "deb https://deb.nodesource.com/node_4.x $(lsb_release -c -s) main" && \
-  (curl -s https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -) && \
-  apt-get update && \
-  apt-get install -y nodejs && \
-  apt-get clean
-
-RUN \
-  npm install -g npm@~3.6.0
+ENV NODE_VERSION=16.16.0
+RUN apt install -y curl
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+ENV NVM_DIR=/root/.nvm
+RUN . "$NVM_DIR/nvm.sh" && nvm install ${NODE_VERSION}
+RUN . "$NVM_DIR/nvm.sh" && nvm use v${NODE_VERSION}
+RUN . "$NVM_DIR/nvm.sh" && nvm alias default v${NODE_VERSION}
+ENV PATH="/root/.nvm/versions/node/v${NODE_VERSION}/bin/:${PATH}"
+RUN node --version
+RUN npm --version
 
 ENV HOME /app
 ENV PORT 8080
@@ -26,9 +26,7 @@ WORKDIR /app
 
 ADD package.json /app/
 
-RUN \
-  npm install && \
-  npm cache clean
+RUN npm install
 
 ADD . /app/
 
