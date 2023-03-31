@@ -19,7 +19,7 @@ docker run --rm \
 * `AWS_REGION` - AWS region. Required if using S3.
 * `S3_BUCKET_NAME` - S3 bucket name. Required if using S3.
 * `API_BASE_URL` - Base Field Papers API URL (used when generating QR codes and
-  titles). Defaults to `http://fieldpapers.org/`.
+  titles). Defaults to `https://fieldpapers.org/`.
 * `PERSIST` - File persistence. Can be `local` or `s3`. Defaults to `s3`.
 * `STATIC_PATH` - Path to write static files to. Must be HTTP-accessible for
   page merging to work. Required if using `local` persistence.
