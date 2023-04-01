@@ -49,7 +49,7 @@ app.get("/", function(req, res, next) {
 });
 
 Object.keys(tasks).forEach(function(name) {
-  const snake = changeCase.snake(name),
+  const snake = changeCase.snakeCase(name),
     task = tasks[name];
 
   app.put(util.format("/%s", snake), function(req, res) {
