@@ -27,9 +27,9 @@ COPY blobdetector /app/blobdetector
 COPY decoder/requirements.txt /app/decoder/requirements.txt
 
 # https://stackoverflow.com/questions/56357794/unable-to-install-grpcio-using-pip-install-grpcio
-RUN pip3 install --upgrade pip
-RUN python3 -m pip install --upgrade setuptools
-RUN pip3 install --no-cache-dir  --force-reinstall -Iv grpcio==1.53.0
+#RUN pip3 install --upgrade pip
+#RUN python3 -m pip install --upgrade setuptools
+#RUN pip3 install --no-cache-dir  --force-reinstall -Iv grpcio==1.53.0
 
 RUN python3 -m pip install -r /app/decoder/requirements.txt
 
