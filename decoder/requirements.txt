@@ -4,5 +4,5 @@ pillow
 numpy
 requests
 sentry
-importlib-metadata==4.13.0
+importlib-metadata==6.1.0
 ./blobdetector
