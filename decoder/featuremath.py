@@ -1,6 +1,6 @@
 from math import sqrt as _sqrt, atan2 as _atan2, sin as _sin, cos as _cos, pi, hypot as _hypot
 from numpy import array as _array, repeat, reshape, nonzero, transpose, arctan2, sqrt as nsqrt
-from itertools import product, chain, izip, repeat as _repeat
+from itertools import product, chain, repeat as _repeat
 
 from matrixmath import Point, Vector, Transform
 
@@ -166,12 +166,12 @@ def blobs2feats_fitted(blobA, blobB, blobs, tmin, tmax, rmin, rmax):
     lim = tmin, tmax, rmin, rmax
     ABL, BAL, ALB, BLA, LAB, LBA = 0, 1, 2, 3, 4, 5
     
-    matches = chain(izip(_repeat(ABL), blobs2feats_limited([blobA], [blobB], blobs, *lim)),
-                    izip(_repeat(BAL), blobs2feats_limited([blobB], [blobA], blobs, *lim)),
-                    izip(_repeat(ALB), blobs2feats_limited([blobA], blobs, [blobB], *lim)),
-                    izip(_repeat(BLA), blobs2feats_limited([blobB], blobs, [blobA], *lim)),
-                    izip(_repeat(LAB), blobs2feats_limited(blobs, [blobA], [blobB], *lim)),
-                    izip(_repeat(LBA), blobs2feats_limited(blobs, [blobB], [blobA], *lim)))
+    matches = chain(zip(_repeat(ABL), blobs2feats_limited([blobA], [blobB], blobs, *lim)),
+                    zip(_repeat(BAL), blobs2feats_limited([blobB], [blobA], blobs, *lim)),
+                    zip(_repeat(ALB), blobs2feats_limited([blobA], blobs, [blobB], *lim)),
+                    zip(_repeat(BLA), blobs2feats_limited([blobB], blobs, [blobA], *lim)),
+                    zip(_repeat(LAB), blobs2feats_limited(blobs, [blobA], [blobB], *lim)),
+                    zip(_repeat(LBA), blobs2feats_limited(blobs, [blobB], [blobA], *lim)))
     
     for (arrangement, match_tuple) in matches:
         if arrangement == ABL:

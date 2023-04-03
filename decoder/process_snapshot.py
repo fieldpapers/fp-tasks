@@ -1,11 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import sys
 
 from os import close, unlink
 from shutil import move
-from StringIO import StringIO
+from io import BytesIO
 from tempfile import mkstemp
 
 try:
@@ -15,7 +15,7 @@ except ImportError:
 else:
     from PIL import Image
 
-from raven import Client
+from sentry_sdk import capture_exception
 
 from decode import CodeReadException, get_paper_size, paper_matches, read_code
 from geoutils import create_geotiff
@@ -29,8 +29,8 @@ def process_snapshot(input_file):
     """
     (highpass_filename, preblobs_filename, postblob_filename) = generate_filenames()
 
-    input = input_file.read()
-    image = Image.open(StringIO(input))
+    input = input_file.buffer.read()
+    image = Image.open(BytesIO(input))
     image.load()
 
     (_, _, north, west, south, east, _paper, _orientation, _) = read_code(input)
@@ -41,7 +41,7 @@ def process_snapshot(input_file):
     unlink(postblob_filename)
 
     for (s2p, paper, orientation, blobs_abcde) in paper_matches(blobs):
-        print >> sys.stderr, paper, orientation, '--', s2p
+        print(paper, orientation, '--', s2p, file=sys.stderr)
 
         if (_paper, _orientation) != (paper, orientation):
             continue
@@ -72,10 +72,9 @@ def generate_filenames():
 
 
 if __name__ == '__main__':
-    client = Client()
 
     try:
-        print process_snapshot(sys.stdin)
+        sys.stdout.buffer.write(process_snapshot(sys.stdin))
     except:
-        client.captureException()
+        capture_exception()
         raise

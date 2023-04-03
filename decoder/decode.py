@@ -1,14 +1,14 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys
 import traceback
 
 from sys import argv
-from StringIO import StringIO
+from io import StringIO
 from subprocess import Popen, PIPE
 from os.path import basename, dirname, join as pathjoin
 from os import close, write, unlink
-from urlparse import urlparse, urljoin
+from urllib.parse import urlparse, urljoin
 from tempfile import mkstemp
 from random import random
 from shutil import move
@@ -117,7 +117,7 @@ def _blob_matches_primary(blobs):
         i0, j0, k0 = dbc_tuple[0:3]
         dbc_match = MatchedFeature(feature_dbc, blobs[i0], blobs[j0], blobs[k0])
     
-        #print 'Found a match for DBC -', (i0, j0, k0)
+        #print('Found a match for DBC -', (i0, j0, k0))
         
         dab_matches = blobs2feats_limited([blobs[i0]], blobs, [blobs[j0]], *theta_ratio_bounds(dab_theta, theta_tol, dab_ratio, ratio_tol))
         
@@ -128,7 +128,7 @@ def _blob_matches_primary(blobs):
             if not dab_match.fits(dbc_match):
                 continue
             
-            #print ' Found a match for DAB -', (i1, j1, k1)
+            #print(' Found a match for DAB -', (i1, j1, k1))
             
             #
             # We think we have a match for points A-D, now check for point E.
@@ -146,7 +146,7 @@ def _blob_matches_primary(blobs):
                 if not aed_match.fits(dab_match):
                     continue
                 
-                #print '  Found a match for AED -', (i2, j2, k2)
+                #print('  Found a match for AED -', (i2, j2, k2))
                 
                 #
                 # We now know we have a three-triangle match; try a fourth to verify.
@@ -169,7 +169,7 @@ def _blob_matches_primary(blobs):
                     if not eac_match.fits(aed_match):
                         continue
                     
-                    #print '   Confirmed match with EAC -', (i3, j3, k3)
+                    #print('   Confirmed match with EAC -', (i3, j3, k3))
                     
                     yield dbc_match, aed_match
 
@@ -217,7 +217,7 @@ def _blob_matches_secondary(blobs, aed_match):
             else:
                 raise Exception('what?')
             
-            #print '    Found a match for point G -', (i0, j0, k0)
+            #print('    Found a match for point G -', (i0, j0, k0))
 
             #
             # We think we have a match for point G, now check for point F.
@@ -234,7 +234,7 @@ def _blob_matches_secondary(blobs, aed_match):
                 if not f_match.fits(g_match):
                     continue
 
-                #print '     Found a match for point F -', (i1, j1, k1), point_F
+                #print('     Found a match for point F -', (i1, j1, k1), point_F)
                 
                 #
                 # Based on the identity of point_F, we can find paper size and orientation.
@@ -245,29 +245,28 @@ def read_code(image):
     """
     """
     decode = 'read_qr_code'
-    decode = Popen('read_qr_code', stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    decode = Popen('/app/decoder/read_qr_code.sh', stdin=PIPE, stdout=PIPE, stderr=PIPE)
 
-    decode.stdin.write(image)
+    stdout_data, stderr_data = decode.communicate(image, timeout=60)
     decode.stdin.close()
-    decode.wait()
 
-    print_url = decode.stdout.read().strip()
+    print_url = stdout_data.decode().strip()
     
-    if not print_url.startswith('http://'):
+    if not print_url.startswith('http'):
         raise CodeReadException('Attempt to read QR code failed')
     
     print_id, north, west, south, east, paper, orientation, layout = get_print_info(print_url)
     
     if layout == 'half-page' and orientation == 'landscape':
         east += (east - west)
-        print >> sys.stderr, 'Adjusted', orientation, layout, 'bounds to %.6f, %.6f, %.6f, %.6f' % (north, west, south, east)
+        print('Adjusted', orientation, layout, 'bounds to %.6f, %.6f, %.6f, %.6f' % (north, west, south, east), file=sys.stderr)
 
     elif layout == 'half-page' and orientation == 'portrait':
         south += (south - north)
-        print >> sys.stderr, 'Adjusted', orientation, layout, 'bounds to %.6f, %.6f, %.6f, %.6f' % (north, west, south, east)
+        print('Adjusted', orientation, layout, 'bounds to %.6f, %.6f, %.6f, %.6f' % (north, west, south, east), file=sys.stderr)
     
     else:
-        print >> sys.stderr, 'Kept', orientation, layout, 'bounds at %.6f, %.6f, %.6f, %.6f' % (north, west, south, east)
+        print('Kept', orientation, layout, 'bounds at %.6f, %.6f, %.6f, %.6f' % (north, west, south, east), file=sys.stderr)
 
     return print_id, print_url, north, west, south, east, paper, orientation, layout
 
@@ -356,7 +355,7 @@ def main(apibase, password, scan_id, url):
     close(handle)
     
     try:
-        print 'Downloading', url
+        print('Downloading', url)
     
         input = imageopen(url)
         blobs = imgblobs(input, highpass_filename, preblobs_filename, postblob_filename)
@@ -377,7 +376,7 @@ def main(apibase, password, scan_id, url):
         _update_scan(uploaded_file, 0.3)
 
         for (s2p, paper, orientation, blobs_abcde) in paper_matches(blobs):
-            print paper, orientation, '--', s2p
+            print(paper, orientation, '--', s2p)
             
             qrcode_img = extract_image(s2p, (-90-9, -90-9, 0+9, 0+9), input, (500, 500))
             _append_image('qrcode.png', qrcode_img)
@@ -386,7 +385,7 @@ def main(apibase, password, scan_id, url):
             try:
                 print_id, print_url, north, west, south, east, _paper, _orientation, _layout = read_code(qrcode_img)
             except CodeReadException:
-                print 'could not read the QR code.'
+                print('could not read the QR code.')
                 continue
     
             if (_paper, _orientation) != (paper, orientation):
@@ -406,7 +405,7 @@ def main(apibase, password, scan_id, url):
     
             _update_scan(uploaded_file, 0.4)
             
-            print 'geotiff...',
+            print('geotiff...',)
             
             paper_width_pt, paper_height_pt = get_paper_size(paper, orientation)
             geo_args = paper_width_pt, paper_height_pt, north, west, south, east
@@ -418,8 +417,8 @@ def main(apibase, password, scan_id, url):
     
             _update_scan(uploaded_file, 0.5)
             
-            print 'done.'
-            print 'tiles...',
+            print('done.')
+            print('tiles...',)
             
             minrow, mincol, minzoom = 2**20, 2**20, 20
             maxrow, maxcol, maxzoom = 0, 0, 0
@@ -433,7 +432,7 @@ def main(apibase, password, scan_id, url):
                 tile_img = extract_tile_for_coord(input, coord, scan2coord)
                 _append_image('%(zoom)d/%(column)d/%(row)d.jpg' % coord.__dict__, tile_img)
 
-                print coord.zoom,
+                print(coord.zoom,)
                 
                 minrow = min(minrow, coord.row)
                 mincol = min(mincol, coord.column)
@@ -443,7 +442,7 @@ def main(apibase, password, scan_id, url):
                 maxcol = max(maxcol, coord.column)
                 maxzoom = max(minzoom, coord.zoom)
             
-            print '...done.'
+            print('...done.')
     
             preview_img = input.copy()
             preview_img.thumbnail((409, 280), Image.ANTIALIAS)
@@ -458,8 +457,8 @@ def main(apibase, password, scan_id, url):
             
             break
 
-    except Exception, e:
-        print 'Failed because:', e
+    except Exception as e:
+        print('Failed because:', e)
         traceback.print_exc()
 
         _fail_scan()
@@ -469,7 +468,7 @@ def main(apibase, password, scan_id, url):
             _finish_scan(uploaded_file, print_id, print_page_number, print_url, min_coord, max_coord, img_bounds)
 
         else:
-            print 'Failed, unable to find a print_id'
+            print('Failed, unable to find a print_id')
             _fail_scan()
 
 

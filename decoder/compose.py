@@ -1,13 +1,13 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from math import pi
 from copy import copy
-from urllib import urlencode
+from urllib.parse import urlencode
 from os.path import join as pathjoin, dirname, realpath
-from urlparse import urljoin, urlparse, parse_qs
+from urllib.parse import urljoin, urlparse, parse_qs
 from os import close, write, unlink
 from optparse import OptionParser
-from StringIO import StringIO
+from io import BytesIO, StringIO
 from tempfile import mkstemp
 import subprocess
 import sys
@@ -29,14 +29,14 @@ cached_fonts = dict()
 def get_qrcode_image(print_href):
     """ Render a QR code to an ImageSurface.
     """
-    qr_code = StringIO(subprocess.Popen("qrencode -m 0 -s 19 -o - %s" % (print_href), shell=True, stdout=subprocess.PIPE).stdout.read())
+    qr_code = BytesIO(subprocess.Popen("qrencode -m 0 -s 19 -o - %s" % (print_href), shell=True, stdout=subprocess.PIPE).stdout.read())
 
     return ImageSurface.create_from_png(qr_code)
 
 def get_mmap_image(mmap):
     """ Render a Map to an ImageSurface.
     """
-    handle, filename = mkstemp(suffix='.png')
+    handle, filename = mkstemp(prefix='map_image-', suffix='.png')
 
     try:
         close(handle)
@@ -111,7 +111,7 @@ def get_map_scale(mmap, map_height_pt):
     pts_per_meter = map_height_pt / vertical_meters
 
     # a selection of reasonable scale values to show
-    meterses = range(50, 300, 50) + range(300, 1000, 100) + range(1000, 10000, 1000) + range(10000, 100000, 10000) + range(100000, 1000000, 100000) + range(1000000, 10000000, 1000000)
+    meterses = list(range(50, 300, 50)) + list(range(300, 1000, 100)) + list(range(1000, 10000, 1000)) + list(range(10000, 100000, 10000)) + list(range(100000, 1000000, 100000)) + list(range(1000000, 10000000, 1000000))
 
     for meters in meterses:
         points = meters * pts_per_meter
@@ -182,8 +182,8 @@ def add_scale_bar(ctx, mmap, map_height_pt):
     ctx.stroke()
 
     ctx.set_font_size(9)
-    zero_width = ctx.text_extents('0')[2]
-    distance_width = ctx.text_extents(distance)[2]
+    zero_width = ctx.text_extents('0').width
+    distance_width = ctx.text_extents(distance).width
 
     ctx.move_to(0, 0)
     ctx.show_text('0')
@@ -192,7 +192,7 @@ def add_scale_bar(ctx, mmap, map_height_pt):
     ctx.show_text(distance)
 
     ctx.set_font_size(7)
-    units_width = ctx.text_extents(units)[2]
+    units_width = ctx.text_extents(units).width
 
     ctx.move_to(zero_width + (size - zero_width - distance_width)/2 - units_width/2, 0)
     ctx.show_text(units.upper())
@@ -202,7 +202,7 @@ def add_scale_bar(ctx, mmap, map_height_pt):
 def add_print_page(ctx, mmap, href, well_bounds_pt, points_FG, hm2pt_ratio, layout, text, mark, fuzzy, indexees, title):
     """
     """
-    print >> sys.stderr, 'Adding print page:', href
+    print('Adding print page:', href, file=sys.stderr)
 
     well_xmin_pt, well_ymin_pt, well_xmax_pt, well_ymax_pt = well_bounds_pt
     well_width_pt, well_height_pt = well_xmax_pt - well_xmin_pt, well_ymax_pt - well_ymin_pt
@@ -352,7 +352,7 @@ def add_print_page(ctx, mmap, href, well_bounds_pt, points_FG, hm2pt_ratio, layo
     place_image(ctx, img, 0, -36, 129.1, 36)
 
     try:
-        font_file = realpath('fonts/LiberationSans-Regular.ttf')
+        font_file = realpath(pathjoin(dirname(__file__), 'fonts/LiberationSans-Regular.ttf'))
 
         if font_file not in cached_fonts:
             cached_fonts[font_file] = create_cairo_font_face_for_file(font_file)
@@ -365,13 +365,13 @@ def add_print_page(ctx, mmap, href, well_bounds_pt, points_FG, hm2pt_ratio, layo
         ctx.set_font_face(font)
         ctx.set_font_size(12)
 
-        line = href.split("?")[0]
-        text_width = ctx.text_extents(line)[2]
+        line = href.split('?')[0]
+        text_width = ctx.text_extents(line).width
 
         ctx.move_to(well_width_pt - text_width, -6)
         ctx.show_text(line)
 
-        title_width = ctx.text_extents(title)[2]
+        title_width = ctx.text_extents(title).width
 
         ctx.move_to(well_width_pt - title_width, -24)
         ctx.show_text(title)
@@ -382,10 +382,10 @@ def add_print_page(ctx, mmap, href, well_bounds_pt, points_FG, hm2pt_ratio, layo
         ctx.set_font_size(18)
 
         for (x1, y1, x2, y2, number) in page_numbers:
-            number_w, number_h = ctx.text_extents(number)[2:4]
-            offset_x, offset_y = (x1 + x2 - number_w) / 2, (y1 + y2 + number_h) / 2
+            num_ext = ctx.text_extents(number)
+            offset_x, offset_y = (x1 + x2 - num_ext.width) / 2, (y1 + y2 + num_ext.height) / 2
 
-            draw_box(ctx, offset_x - 4, offset_y - number_h - 4, number_w + 8, number_h + 8)
+            draw_box(ctx, offset_x - 4, offset_y - num_ext.height - 4, num_ext.width + 8, num_ext.height + 8)
             ctx.set_source_rgb(1, 1, 1)
             ctx.fill()
 
@@ -438,8 +438,8 @@ def main(apibase, password, print_id, pages, paper_size, orientation, layout):
     _finish_print = lambda print_info: print_id and finish_print(apibase, password, print_id, print_info) or None
     _update_print = lambda progress: print_id and update_print(apibase, password, print_id, progress) or None
 
-    print >> sys.stderr, 'Print:', print_id
-    print >> sys.stderr, 'Paper:', orientation, paper_size, layout
+    print('Print:', print_id, file=sys.stderr)
+    print('Paper:', orientation, paper_size, layout, file=sys.stderr)
 
     #
     # Prepare output context.

@@ -14,22 +14,16 @@ using namespace std;
  */
 static PyObject *detect(PyObject *self, PyObject *args)
 {
-    int x, y, w, h, off, len, label, blobs = 0;
+    int x, y, w, h, off, label, blobs = 0;
     unsigned char *pixels;
     map< int, set<int> > groups;
     
-    if(!PyArg_ParseTuple(args, "iis#", &w, &h, &pixels, &len))
+    if(!PyArg_ParseTuple(args, "iiS", &w, &h, &pixels))
     {
         /* fail unless I got two ints and a single string as input */
         return NULL;
     }
-    
-    if(w * h != len)
-    {
-        // fail if the given dimensions don't seem to match the passed image
-        return NULL;
-    }
-    
+
    /*
     * Pass one: provisionally label each non-background cell with a label.
     */
@@ -163,7 +157,7 @@ static PyObject *detect(PyObject *self, PyObject *args)
         off += 5;
     }
     
-    return Py_BuildValue("is#", bounds.size(), response, bounds.size() * sizeof(uint32_t) * 5);
+    return Py_BuildValue("iy#", bounds.size(), response, bounds.size() * sizeof(uint32_t) * 5);
 }
 
 /* map between python function name and C function pointer */
@@ -172,7 +166,16 @@ static PyMethodDef BlobsMethods[] = {
     {NULL, NULL, 0, NULL}
 };
 
+static struct PyModuleDef cModPyDem =
+{
+    PyModuleDef_HEAD_INIT,
+    "_blobs", /* name of module */
+    "",          /* module documentation, may be NULL */
+    -1,          /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
+    BlobsMethods
+};
+
 /* bootstrap function, called automatically when you 'import _blobs' */
-PyMODINIT_FUNC init_blobs(void) {
-    (void)Py_InitModule("_blobs", BlobsMethods);
+PyMODINIT_FUNC PyInit__blobs(void) {
+    return PyModule_Create(&cModPyDem);
 }

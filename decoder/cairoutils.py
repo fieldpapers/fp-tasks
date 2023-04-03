@@ -1,6 +1,5 @@
 import json
-from StringIO import StringIO
-from os import close, write, unlink
+from os import close, write, unlink, stat
 from subprocess import Popen, PIPE
 from tempfile import mkstemp
 
@@ -20,7 +19,8 @@ class Affine (Transform):
         Transform.__init__(self, a, b, c, d, e, f)
 
     def __str__(self):
-        return '[%.2f, %.2f, %.2f], [%.2f, %.2f, %.2f]' % self.terms()
+        t = self.terms()
+        return f'[{t[0]:.2f}, {t[1]:.2f}, {t[2]:.2f}], [{t[3]:.2f}, {t[4]:.2f}f, {t[5]:.2f}]'
 
     def terms(self):
         return tuple(self.matrix[0:2,0:3].flat)
@@ -52,7 +52,7 @@ class FakeContext:
 
         self.commands = []
         self.garbage = [dummy_file]
-        self.page = []
+        self.page_commands = []
 
         self.point = Point(0, 0)
         self.stack = [(1, 0, 0, 0, -1, height)]
@@ -62,18 +62,19 @@ class FakeContext:
         return self.point.x, self.point.y
     
     def command(self, text, *args):
-        if args:
-            self.page.append((text, args))
-        else:
-            self.page.append(('raw', [text]))
+        self.page_commands.append((text, args))
+
+    def raw_command(self, text):
+        self.page_commands.append(('raw', [text]))
 
     def show_page(self):
         # vertically flip everything because FPDF.
         self.commands.append(('AddPage', []))
-        self.commands.append(('raw', ['1 0 0 -1 0 %.3f cm' % self.size[1]]))
+        height = self.size[1]
+        self.commands.append(('raw', [f'1 0 0 -1 0 {height:.3f} cm']))
 
-        self.commands += self.page
-        self.page = []
+        self.commands += self.page_commands
+        self.page_commands = []
 
     def finish(self):
         """
@@ -84,10 +85,9 @@ class FakeContext:
             'filename': self.filename
           }
         
-        page = Popen(['php', 'lossy/page.php'], stdin=PIPE)
-        json.dump(info, page.stdin)
+        page = Popen(['php', 'lossy/page.php'], stdin=PIPE, text=True)
+        page.communicate(json.dumps(info), timeout=60)
         page.stdin.close()
-        page.wait()
         
         for filename in self.garbage:
             unlink(filename)
@@ -95,20 +95,20 @@ class FakeContext:
     def translate(self, x, y):
         self.affine = self.affine.translate(x, y)
         self.point = Point(self.point.x + x, self.point.y + y)
-        self.command('1 0 0 1 %.3f %.3f cm' % (x, y))
+        self.raw_command(f'1 0 0 1 {x:.3f} {y:.3f} cm')
 
     def scale(self, x, y):
         self.affine = self.affine.scale(x, y)
         self.point = Point(self.point.x * x, self.point.y * y)
-        self.command('%.6f 0 0 %.6f 0 0 cm' % (x, y))
+        self.raw_command(f'{x:.6f} 0 0 {y:.6f} 0 0 cm')
 
     def save(self):
         self.stack.append(self.affine.terms())
-        self.command('q')
+        self.raw_command('q')
 
     def restore(self):
         self.affine = Affine(*self.stack.pop())
-        self.command('Q')
+        self.raw_command('Q')
 
     def user_to_device(self, x, y):
         user = Point(x, y)
@@ -122,76 +122,73 @@ class FakeContext:
 
     def move_to(self, x, y):
         self.point = Point(x, y)
-        self.command('%.3f %.3f m' % (x, y))
+        self.raw_command(f'{x:.3f} {y:.3f} m')
 
     def line_to(self, x, y):
         self.point = Point(x, y)
-        self.command('%.3f %.3f l' % (x, y))
+        self.raw_command(f'{x:.3f} {y:.3f} l')
 
     def rel_move_to(self, x, y):
         end = Point(x, y).add(self.point)
         self.point = end
-        self.command('%.3f %.3f m' % (end.x, end.y))
+        self.raw_command(f'{end.x:.3f} {end.y:.3f} m')
 
     def rel_line_to(self, x, y):
         end = Point(x, y).add(self.point)
         self.point = end
-        self.command('%.3f %.3f l' % (end.x, end.y))
+        self.raw_command(f'{end.x:.3f} {end.y:.3f} l')
 
     def set_source_rgb(self, r, g, b):
-        self.command('%.3f %.3f %.3f rg' % (r, g, b))
+        self.raw_command(f'{r:.3f} {g:.3f} {b:.3f} rg')
 
     def fill(self):
-        self.command('f')
+        self.raw_command('f')
 
     def set_source_surface(self, surf, x, y):
         """
         """
         dim = surf.get_width(), surf.get_height()
-        img = Image.fromstring('RGBA', dim, surf.get_data())
+        img = Image.frombytes('RGBA', dim, surf.get_data().tobytes())
         
         # weird channel order
         blue, green, red, alpha = img.split()
         img = Image.merge('RGB', (red, green, blue))
 
-        png_buf = StringIO()
-        img.save(png_buf, 'PNG')
+        png_handle, png_filename = mkstemp(prefix='cairoutils-', suffix='.png')
+        img.save(png_filename, 'PNG')
         
-        jpg_buf = StringIO()
-        img.save(jpg_buf, 'JPEG', quality=75)
+        jpg_handle, jpg_filename = mkstemp(prefix='cairoutils-', suffix='.jpg')
+        img.save(jpg_filename, 'JPEG', quality=75)
         
-        if len(jpg_buf.getvalue()) < len(png_buf.getvalue()):
-            method, buffer, suffix = 'raw_jpeg', jpg_buf, '.jpg'
-        
+        if stat(jpg_filename).st_size < stat(png_filename).st_size:
+            method, handle, filename = 'raw_jpeg', jpg_handle, jpg_filename
         else:
-            method, buffer, suffix = 'raw_png', png_buf, '.png'
+            method, handle, filename = 'raw_png', png_handle, png_filename
         
-        handle, filename = mkstemp(prefix='cairoutils-', suffix=suffix)
         self.command(method, filename)
         self.garbage.append(filename)
 
-        write(handle, buffer.getvalue())
         close(handle)
 
     def paint(self):
         pass
 
     def set_line_width(self, w):
-        self.command('%.3f w' % w)
+        self.raw_command(f'{w:.3f} w')
 
     def set_dash(self, a):
-        a = ' '.join(['%.3f' % v for v in a])
-        self.command('[%s] 0 d' % a)
+        a = ' '.join([f'{v:.3f}' for v in a])
+        self.raw_command(f'[{a}] 0 d')
 
     def stroke(self):
-        self.command('S')
+        self.raw_command('S')
 
     def rel_curve_to(self, a, b, c, d, e, f):
         p1 = Point(a, b).add(self.point)
         p2 = Point(c, d).add(self.point)
         p3 = Point(e, f).add(self.point)
         self.point = p3
-        self.command('%.3f %.3f %.3f %.3f %.3f %.3f c' % (p1.x, p1.y, p2.x, p2.y, p3.x, p3.y))
+        self.raw_command(f'{p1.x:.3f} {p1.y:.3f} {p2.x:.3f} {p2.y:.3f} {p3.x:.3f} {p3.y:.3f} c')
 
     def set_font_face(self, font):
         self.context.set_font_face(font)
@@ -204,15 +201,13 @@ class FakeContext:
         self.command('SetFontSize', size)
 
     def show_text(self, text):
-        x, y = self.point.x, self.point.y
-        text = text.decode('utf8')
-        
         # invert the vertical flip in self.show_page() before showing text.
-        self.command('q 1 0 0 -1 0 0 cm BT %.3f %.3f Td (%s) Tj ET Q' % (x, -y, text))
+        x, y = self.point.x, -self.point.y
+
+        self.raw_command(f'q 1 0 0 -1 0 0 cm BT {x:.3f} {y:.3f} Td ({text}) Tj ET Q')
 
     def text_extents(self, text):
-        """ Width is the third element of the returned array.
-        """
+        #https://pycairo.readthedocs.io/en/latest/reference/textextents.html#cairo.TextExtents
         return self.context.text_extents(text)
 
 def get_drawing_context(print_filename, page_width_pt, page_height_pt):

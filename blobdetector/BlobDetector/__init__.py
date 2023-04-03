@@ -48,13 +48,13 @@ try:
 except ImportError:
     import Image
 
-def detect(i):
+def detect(img):
     """ Take an instance of single-channel Image, detect blobs and return list of blobs.
     
         Each blob is a five-element tuple: xmin, ymin, xmax, ymax, pixel count.
     """
-    assert i.mode == 'L'
-    l, s = _blobs.detect(i.size[0], i.size[1], i.tostring())
+    assert img.mode == 'L'
+    l, s = _blobs.detect(img.width, img.height, img.tobytes())
     bounds = _expand(s)
     assert l == len(bounds)
     return bounds

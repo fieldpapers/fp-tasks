@@ -393,7 +393,7 @@ if __name__ == '__main__':
         hImage, hData = PIL.Image.open(sys.argv[1]).convert('RGB'), open(sys.argv[2], 'r')
         nImage, nData = PIL.Image.open(sys.argv[3]).convert('RGB'), open(sys.argv[4], 'r')
     except:
-        print >> sys.stderr, 'Usage: %s <haystack image> <haystack descriptors> <needle image> <needle descriptors>' % os.path.basename(__file__)
+        print('Usage: %s <haystack image> <haystack descriptors> <needle image> <needle descriptors>' % os.path.basename(__file__), file=sys.stderr)
         sys.exit(1)
     else:
         out = main(hImage, hData, nImage, nData)

@@ -20,11 +20,11 @@
 
 from math import pi
 
-from Core import Coordinate
-from Geo import MercatorProjection, deriveTransformation
-from Providers import IMapProvider
+from .Core import Coordinate
+from .Geo import MercatorProjection, deriveTransformation
+from .Providers import IMapProvider
 
-import Tiles
+from .Tiles import toYahoo
 
 ROAD_VERSION = '3.52'
 AERIAL_VERSION = '1.7'
@@ -37,7 +37,7 @@ class AbstractProvider(IMapProvider):
         self.projection = MercatorProjection(0, t)
 
     def getZoomString(self, coordinate):
-        return 'x=%d&y=%d&z=%d' % Tiles.toYahoo(int(coordinate.column), int(coordinate.row), int(coordinate.zoom))
+        return 'x=%d&y=%d&z=%d' % toYahoo(int(coordinate.column), int(coordinate.row), int(coordinate.zoom))
 
     def tileWidth(self):
         return 256

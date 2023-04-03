@@ -3,7 +3,7 @@ from tempfile import mkstemp
 from os import close, unlink
 from math import hypot
 from subprocess import Popen, PIPE
-
+import sys
 from osgeo import osr
 
 try:
@@ -118,7 +118,7 @@ def create_geotiff(image, p2s, paper_width_pt, paper_height_pt, north, west, sou
         translate += ['-a_srs', epsg900913]
         translate += [png_filename, vrt_filename]
         
-        print >> stderr, '%', ' '.join(translate)
+        print('%', ' '.join(translate), file=sys.stderr)
         
         translate = Popen(translate, stdout=PIPE)
         translate.wait()
@@ -130,7 +130,7 @@ def create_geotiff(image, p2s, paper_width_pt, paper_height_pt, north, west, sou
         warp1 += ['-dstnodata', '153 153 153']
         warp1 += [vrt_filename, tif1_filename]
         
-        print >> stderr, '%', ' '.join(warp1)
+        print('%', ' '.join(warp1), file=sys.stderr)
         
         warp1 = Popen(warp1, stdout=PIPE)
         warp1.wait()
@@ -141,7 +141,7 @@ def create_geotiff(image, p2s, paper_width_pt, paper_height_pt, north, west, sou
         #
         # Read the raw bytes of the GeoTIFF for return.
         #
-        geotiff_bytes = open(tif1_filename).read()
+        geotiff_bytes = open(tif1_filename, 'rb').read()
         
         #
         # Do another one, smaller this time for the projected JPEG.
@@ -154,7 +154,7 @@ def create_geotiff(image, p2s, paper_width_pt, paper_height_pt, north, west, sou
         warp2 += ['-dstnodata', '153 153 153']
         warp2 += [vrt_filename, tif2_filename]
         
-        print >> stderr, '%', ' '.join(warp2)
+        print('%', ' '.join(warp2), file=sys.stderr)
         
         warp2 = Popen(warp2, stdout=PIPE)
         warp2.wait()
@@ -165,7 +165,7 @@ def create_geotiff(image, p2s, paper_width_pt, paper_height_pt, north, west, sou
         geojpeg_img = Image.open(tif2_filename)
         geojpeg_img.save(jpg_filename)
         
-    except Exception, e:
+    except Exception as e:
         raise
     
     finally:

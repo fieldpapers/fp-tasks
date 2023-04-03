@@ -3,5 +3,6 @@ gdal
 pillow
 numpy
 requests
-raven
-git+https://github.com/migurski/Blobdetector
+sentry
+importlib-metadata==4.13.0
+./blobdetector

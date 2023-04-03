@@ -1,9 +1,9 @@
 from math import e
-from StringIO import StringIO
-from urllib import urlopen
+from io import StringIO
+from urllib.parse import urlparse
+from urllib.request import urlopen
 from subprocess import Popen
 from tempfile import mkstemp
-from urlparse import urlparse
 from os.path import splitext
 from os import write, close, unlink
 
@@ -249,9 +249,9 @@ def extract_image(scan2print, print_bbox, scan_img, dest_dim, step=50):
 def arr2img(ar):
     """ Convert Numeric array to PIL Image.
     """
-    return Image.fromstring('L', (ar.shape[1], ar.shape[0]), ar.astype(ubyte).tostring())
+    return Image.frombytes('L', (ar.shape[1], ar.shape[0]), ar.astype(ubyte))
 
 def img2arr(im):
     """ Convert PIL Image to Numeric array.
     """
-    return fromstring(im.tostring(), ubyte).reshape((im.size[1], im.size[0]))
+    return fromstring(im.tobytes(), ubyte).reshape((im.size[1], im.size[0]))

@@ -1,10 +1,10 @@
 import sys
 
-from urlparse import urljoin
+from urllib.parse import urljoin
 from os.path import dirname, basename
 from xml.etree import ElementTree
 from mimetypes import guess_type
-from StringIO import StringIO
+from io import StringIO
 
 import requests
 
@@ -173,7 +173,7 @@ def append_scan_file(scan_id, file_path, file_contents, apibase, password):
 def get_print_info(print_url):
     """
     """
-    print >> sys.stderr, print_url
+    print(print_url, file=sys.stderr)
     res = requests.get(print_url, headers=dict(Accept='application/paperwalking+xml'))
 
     if res.status_code == 404:
@@ -191,6 +191,6 @@ def get_print_info(print_url):
     east = float(print_.find('bounds').find('east').text)
     west = float(print_.find('bounds').find('west').text)
 
-    print >> sys.stderr, print_id, north, west, south, east, paper, orientation, layout
+    print(print_id, north, west, south, east, paper, orientation, layout, file=sys.stderr)
     
     return print_id, north, west, south, east, paper, orientation, layout

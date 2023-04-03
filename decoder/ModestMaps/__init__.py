@@ -1,14 +1,14 @@
 """
->>> m = Map(Microsoft.RoadProvider(), Core.Point(600, 600), Core.Coordinate(3165, 1313, 13), Core.Point(-144, -94))
->>> p = m.locationPoint(Geo.Location(37.804274, -122.262940))
+>>> m = Map(Microsoft.RoadProvider(), Point(600, 600), Coordinate(3165, 1313, 13), Point(-144, -94))
+>>> p = m.locationPoint(Location(37.804274, -122.262940))
 >>> p
 (370.724, 342.549)
 >>> m.pointLocation(p)
 (37.804, -122.263)
 
->>> c = Geo.Location(37.804274, -122.262940)
+>>> c = Location(37.804274, -122.262940)
 >>> z = 12
->>> d = Core.Point(800, 600)
+>>> d = Point(800, 600)
 >>> m = mapByCenterZoom(Microsoft.RoadProvider(), c, z, d)
 >>> m.dimensions
 (800.000, 600.000)
@@ -17,9 +17,9 @@
 >>> m.offset
 (-235.000, -196.000)
 
->>> sw = Geo.Location(36.893326, -123.533554)
->>> ne = Geo.Location(38.864246, -121.208153)
->>> d = Core.Point(800, 600)
+>>> sw = Location(36.893326, -123.533554)
+>>> ne = Location(38.864246, -121.208153)
+>>> d = Point(800, 600)
 >>> m = mapByExtent(Microsoft.RoadProvider(), sw, ne, d)
 >>> m.dimensions
 (800.000, 600.000)
@@ -28,9 +28,9 @@
 >>> m.offset
 (-251.000, -218.000)
 
->>> se = Geo.Location(36.893326, -121.208153)
->>> nw = Geo.Location(38.864246, -123.533554)
->>> d = Core.Point(1600, 1200)
+>>> se = Location(36.893326, -121.208153)
+>>> nw = Location(38.864246, -123.533554)
+>>> d = Point(1600, 1200)
 >>> m = mapByExtent(Microsoft.RoadProvider(), se, nw, d)
 >>> m.dimensions
 (1600.000, 1200.000)
@@ -39,8 +39,8 @@
 >>> m.offset
 (-246.000, -179.000)
 
->>> sw = Geo.Location(36.893326, -123.533554)
->>> ne = Geo.Location(38.864246, -121.208153)
+>>> sw = Location(36.893326, -123.533554)
+>>> ne = Location(38.864246, -121.208153)
 >>> z = 10
 >>> m = mapByExtentZoom(Microsoft.RoadProvider(), sw, ne, z)
 >>> m.dimensions
@@ -50,8 +50,8 @@
 >>> m.offset
 (-236.000, -102.000)
 
->>> se = Geo.Location(36.893326, -121.208153)
->>> nw = Geo.Location(38.864246, -123.533554)
+>>> se = Location(36.893326, -121.208153)
+>>> nw = Location(38.864246, -123.533554)
 >>> z = 9
 >>> m = mapByExtentZoom(Microsoft.RoadProvider(), se, nw, z)
 >>> m.dimensions
@@ -68,11 +68,9 @@ __version__ = open(os.path.join(os.path.dirname(__file__), 'VERSION')).read().st
 
 import sys
 import urllib
-import httplib
-import urlparse
-import StringIO
+from io import BytesIO
 import math
-import thread
+import threading
 import time
 
 try:
@@ -85,36 +83,42 @@ except ImportError:
         # maybe that's not what you're using MMaps for?
         Image = None
 
-import Tiles
-import Providers
-import Core
-import Geo
-import Yahoo, Microsoft, BlueMarble, OpenStreetMap, CloudMade, MapQuest, Stamen
+from .Tiles import *
+from .Providers import *
+from .Core import Point, Coordinate
+from .Geo import Location
+from .Yahoo import RoadProvider as YahooRoadProvider, AerialProvider as YahooAerialProvider, HybridProvider as YahooHybridProvider
+from .Microsoft import RoadProvider as MicrosoftRoadProvider, AerialProvider as MicrosoftAerialProvider, HybridProvider as MicrosoftHybridProvider
+from .BlueMarble import Provider as BlueMarbleProvider
+from .OpenStreetMap import Provider as OSMProvider
+from .CloudMade import OriginalProvider, FineLineProvider, TouristProvider, FreshProvider, PaleDawnProvider, MidnightCommanderProvider
+from .MapQuest import RoadProvider as MapQuestRoadProvider, AerialProvider as MapQuestAerialProvider
+from .Stamen import TonerProvider, TerrainProvider, WatercolorProvider
 import time
 
 # a handy list of possible providers, which isn't
 # to say that you can't go writing your own.
 builtinProviders = {
-    'OPENSTREETMAP':    OpenStreetMap.Provider,
-    'OPEN_STREET_MAP':  OpenStreetMap.Provider,
-    'BLUE_MARBLE':      BlueMarble.Provider,
-    'MAPQUEST_ROAD':   MapQuest.RoadProvider,
-    'MAPQUEST_AERIAL':   MapQuest.AerialProvider,
-    'MICROSOFT_ROAD':   Microsoft.RoadProvider,
-    'MICROSOFT_AERIAL': Microsoft.AerialProvider,
-    'MICROSOFT_HYBRID': Microsoft.HybridProvider,
-    'YAHOO_ROAD':       Yahoo.RoadProvider,
-    'YAHOO_AERIAL':     Yahoo.AerialProvider,
-    'YAHOO_HYBRID':     Yahoo.HybridProvider,
-    'CLOUDMADE_ORIGINAL': CloudMade.OriginalProvider,
-    'CLOUDMADE_FINELINE': CloudMade.FineLineProvider,
-    'CLOUDMADE_TOURIST': CloudMade.TouristProvider,
-    'CLOUDMADE_FRESH':  CloudMade.FreshProvider,
-    'CLOUDMADE_PALEDAWN': CloudMade.PaleDawnProvider,
-    'CLOUDMADE_MIDNIGHTCOMMANDER': CloudMade.MidnightCommanderProvider,
-    'STAMEN_TONER': Stamen.TonerProvider,
-    'STAMEN_TERRAIN': Stamen.TerrainProvider,
-    'STAMEN_WATERCOLOR': Stamen.WatercolorProvider,
+    'OPENSTREETMAP':    OSMProvider,
+    'OPEN_STREET_MAP':  OSMProvider,
+    'BLUE_MARBLE':      BlueMarbleProvider,
+    'MAPQUEST_ROAD':   MapQuestRoadProvider,
+    'MAPQUEST_AERIAL':   MapQuestAerialProvider,
+    'MICROSOFT_ROAD':   MicrosoftRoadProvider,
+    'MICROSOFT_AERIAL': MicrosoftAerialProvider,
+    'MICROSOFT_HYBRID': MicrosoftHybridProvider,
+    'YAHOO_ROAD':       YahooRoadProvider,
+    'YAHOO_AERIAL':     YahooAerialProvider,
+    'YAHOO_HYBRID':     YahooHybridProvider,
+    'CLOUDMADE_ORIGINAL': OriginalProvider,
+    'CLOUDMADE_FINELINE': FineLineProvider,
+    'CLOUDMADE_TOURIST': TouristProvider,
+    'CLOUDMADE_FRESH':  FreshProvider,
+    'CLOUDMADE_PALEDAWN': PaleDawnProvider,
+    'CLOUDMADE_MIDNIGHTCOMMANDER': MidnightCommanderProvider,
+    'STAMEN_TONER': TonerProvider,
+    'STAMEN_TERRAIN': TerrainProvider,
+    'STAMEN_WATERCOLOR': WatercolorProvider,
     }
 
 def mapByCenterZoom(provider, center, zoom, dimensions):
@@ -144,10 +148,10 @@ def mapByExtentZoom(provider, locationA, locationB, zoom):
     height = abs(coordA.row - coordB.row) * provider.tileHeight()
     
     # nearest pixel actually
-    dimensions = Core.Point(int(width), int(height))
+    dimensions = Point(int(width), int(height))
     
     # projected center of the map
-    centerCoord = Core.Coordinate((coordA.row + coordB.row) / 2,
+    centerCoord = Coordinate((coordA.row + coordB.row) / 2,
                                   (coordA.column + coordB.column) / 2,
                                   zoom)
     
@@ -165,7 +169,7 @@ def calculateMapCenter(provider, centerCoord):
     # initial tile position, assuming centered tile well in grid
     initX = (initTileCoord.column - centerCoord.column) * provider.tileWidth()
     initY = (initTileCoord.row - centerCoord.row) * provider.tileHeight()
-    initPoint = Core.Point(round(initX), round(initY))
+    initPoint = Point(round(initX), round(initY))
     
     return initTileCoord, initPoint
 
@@ -176,11 +180,11 @@ def calculateMapExtent(provider, width, height, *args):
     """
     coordinates = map(provider.locationCoordinate, args)
     
-    TL = Core.Coordinate(min([c.row for c in coordinates]),
+    TL = Coordinate(min([c.row for c in coordinates]),
                          min([c.column for c in coordinates]),
                          min([c.zoom for c in coordinates]))
 
-    BR = Core.Coordinate(max([c.row for c in coordinates]),
+    BR = Coordinate(max([c.row for c in coordinates]),
                          max([c.column for c in coordinates]),
                          max([c.zoom for c in coordinates]))
                     
@@ -213,7 +217,7 @@ def calculateMapExtent(provider, width, height, *args):
     centerRow = (TL.row + BR.row) / 2
     centerColumn = (TL.column + BR.column) / 2
     centerZoom = (TL.zoom + BR.zoom) / 2
-    centerCoord = Core.Coordinate(centerRow, centerColumn, centerZoom).zoomTo(initZoom)
+    centerCoord = Coordinate(centerRow, centerColumn, centerZoom).zoomTo(initZoom)
     
     return calculateMapCenter(provider, centerCoord)
     
@@ -221,7 +225,7 @@ def printlocked(lock, *stuff):
     """
     """
     if lock.acquire():
-        print >> sys.stderr, ' '.join([str(thing) for thing in stuff])
+        print(' '.join([str(thing) for thing in stuff]), file=sys.stderr)
         lock.release()
 
 class TileRequest:
@@ -249,23 +253,24 @@ class TileRequest:
         urls = self.provider.getTileUrls(self.coord)
         
         if verbose:
-            printlocked(lock, 'Requesting', urls, '- attempt no.', attempt, 'in thread', hex(thread.get_ident()))
+            printlocked(lock, 'Requesting', urls, '- attempt no.', attempt, 'in thread', hex(threading.get_ident()))
 
         # this is the time-consuming part
         try:
             imgs = []
         
-            for (scheme, netloc, path, params, query, fragment) in map(urlparse.urlparse, urls):
+            for url in urls:
+                scheme, netloc, path, params, query, fragment = urllib.parse.urlparse(url)
                 if (netloc, path, query) in cache:
                     if lock.acquire():
                         img = cache[(netloc, path, query)].copy()
                         lock.release()
 
                     if verbose:
-                        printlocked(lock, 'Found', urlparse.urlunparse(('http', netloc, path, '', query, '')), 'in cache')
+                        printlocked(lock, 'Found', urllib.parse.urlunparse(('http', netloc, path, '', query, '')), 'in cache')
             
                 elif scheme in ('file', ''):
-                    img = Image.open(path).convert('RGBA')
+                    img = Image.open(path).convert(mode='RGBA')
                     imgs.append(img)
 
                     if lock.acquire():
@@ -273,13 +278,11 @@ class TileRequest:
                         lock.release()
                 
                 elif scheme in ('http', 'https'):
-                    conn = httplib.HTTPConnection(netloc)
-                    conn.request('GET', path + ('?' + query).rstrip('?'), headers={'User-Agent': 'Field Papers (http://fieldpapers.org/)'})
-                    response = conn.getresponse()
+                    response = urllib.request.urlopen(urllib.request.Request(url, headers={'User-Agent': 'Field Papers (http://fieldpapers.org/)'}, method='GET'))
                     status = str(response.status)
                     
                     if status.startswith('2'):
-                        img = Image.open(StringIO.StringIO(response.read())).convert('RGBA')
+                        img = Image.open(BytesIO(response.read())).convert(mode='RGBA')
                         imgs.append(img)
     
                         if lock.acquire():
@@ -314,7 +317,7 @@ class TileRequest:
                 
         except:
             if verbose:
-                printlocked(lock, 'Failed', urls, '- attempt no.', attempt, 'in thread', hex(thread.get_ident()))
+                printlocked(lock, 'Failed', urls, '- attempt no.', attempt, 'in thread', hex(threading.get_ident()))
 
             if attempt < TileRequest.MAX_ATTEMPTS:
                 time.sleep(1 * attempt)
@@ -324,7 +327,7 @@ class TileRequest:
 
         else:
             if verbose:
-                printlocked(lock, 'Received', urls, '- attempt no.', attempt, 'in thread', hex(thread.get_ident()))
+                printlocked(lock, 'Received', urls, '- attempt no.', attempt, 'in thread', hex(threading.get_ident()))
 
         if lock.acquire():
             self.imgs = imgs
@@ -335,19 +338,17 @@ class TileQueue(list):
     """ List of TileRequest objects, that's sensitive to when they're loaded.
     """
 
-    def __getslice__(self, i, j):
-        """ Return a TileQueue when a list slice is called-for.
+    def __getitem__(self, k):
+        if isinstance(k, slice):
+            other = TileQueue()
         
-            Python docs say that __getslice__ is deprecated, but its
-            replacement __getitem__ doesn't seem to be doing anything.
-        """
-        other = TileQueue()
-        
-        for t in range(i, j):
-            if t < len(self):
-                other.append(self[t])
+            for t in range(k.start, k.stop):
+                if t < len(self):
+                    other.append(self[t])
 
-        return other
+            return other
+        return list.__getitem__(self, k)
+       
 
     def pending(self):
         """ True if any contained tile is still loading.
@@ -383,7 +384,7 @@ class Map:
     def locationPoint(self, location):
         """ Return an x, y point on the map image for a given geographical location.
         """
-        point = Core.Point(self.offset.x, self.offset.y)
+        point = Point(self.offset.x, self.offset.y)
         coord = self.provider.locationCoordinate(location).zoomTo(self.coordinate.zoom)
         
         # distance from the known coordinate offset
@@ -399,10 +400,10 @@ class Map:
     def pointLocation(self, point):
         """ Return a geographical location on the map image for a given x, y point.
         """
-        hizoomCoord = self.coordinate.zoomTo(Core.Coordinate.MAX_ZOOM)
+        hizoomCoord = self.coordinate.zoomTo(Coordinate.MAX_ZOOM)
         
         # because of the center/corner business
-        point = Core.Point(point.x - self.dimensions.x/2,
+        point = Point(point.x - self.dimensions.x/2,
                            point.y - self.dimensions.y/2)
         
         # distance in tile widths from reference tile to point
@@ -410,11 +411,11 @@ class Map:
         yTiles = (point.y - self.offset.y) / self.provider.tileHeight();
         
         # distance in rows & columns at maximum zoom
-        xDistance = xTiles * math.pow(2, (Core.Coordinate.MAX_ZOOM - self.coordinate.zoom));
-        yDistance = yTiles * math.pow(2, (Core.Coordinate.MAX_ZOOM - self.coordinate.zoom));
+        xDistance = xTiles * math.pow(2, (Coordinate.MAX_ZOOM - self.coordinate.zoom));
+        yDistance = yTiles * math.pow(2, (Coordinate.MAX_ZOOM - self.coordinate.zoom));
         
         # new point coordinate reflecting that distance
-        coord = Core.Coordinate(round(hizoomCoord.row + yDistance),
+        coord = Coordinate(round(hizoomCoord.row + yDistance),
                                 round(hizoomCoord.column + xDistance),
                                 hizoomCoord.zoom)
 
@@ -428,10 +429,10 @@ class Map:
     
     def draw_bbox(self, bbox, zoom=16, verbose=False) :
 
-        sw = Geo.Location(bbox[0], bbox[1])
-        ne = Geo.Location(bbox[2], bbox[3])
-        nw = Geo.Location(ne.lat, sw.lon)
-        se = Geo.Location(sw.lat, ne.lon)
+        sw = Location(bbox[0], bbox[1])
+        ne = Location(bbox[2], bbox[3])
+        nw = Location(ne.lat, sw.lon)
+        se = Location(sw.lat, ne.lon)
         
         TL = self.provider.locationCoordinate(nw).zoomTo(zoom)
 
@@ -458,7 +459,7 @@ class Map:
             
             while cur_lat > max_lat :
                 
-                tiles.append(TileRequest(self.provider, tileCoord, Core.Point(x_off, y_off)))
+                tiles.append(TileRequest(self.provider, tileCoord, Point(x_off, y_off)))
                 y_off += self.provider.tileHeight()
                 
                 tileCoord = tileCoord.down()
@@ -483,12 +484,12 @@ class Map:
 
         coord, offset = calculateMapExtent(self.provider,
                                            width, height,
-                                           Geo.Location(bbox[0], bbox[1]),
-                                           Geo.Location(bbox[2], bbox[3]))
+                                           Location(bbox[0], bbox[1]),
+                                           Location(bbox[2], bbox[3]))
 
         self.offset = offset
         self.coordinates = coord
-        self.dimensions = Core.Point(width, height)
+        self.dimensions = Point(width, height)
 
         return self.draw()
     
@@ -498,7 +499,7 @@ class Map:
         """ Draw map out to a PIL.Image and return it.
         """
         coord = self.coordinate.copy()
-        corner = Core.Point(int(self.offset.x + self.dimensions.x/2), int(self.offset.y + self.dimensions.y/2))
+        corner = Point(int(self.offset.x + self.dimensions.x/2), int(self.offset.y + self.dimensions.y/2))
 
         while corner.x > 0:
             corner.x -= self.provider.tileWidth()
@@ -514,7 +515,7 @@ class Map:
         for y in range(corner.y, self.dimensions.y, self.provider.tileHeight()):
             tileCoord = rowCoord.copy()
             for x in range(corner.x, self.dimensions.x, self.provider.tileWidth()):
-                tiles.append(TileRequest(self.provider, tileCoord, Core.Point(x, y)))
+                tiles.append(TileRequest(self.provider, tileCoord, Point(x, y)))
                 tileCoord = tileCoord.right()
             rowCoord = rowCoord.down()
 
@@ -524,7 +525,7 @@ class Map:
     
     def render_tiles(self, tiles, img_width, img_height, verbose=False, fatbits_ok=False):
         
-        lock = thread.allocate_lock()
+        lock = threading.Lock()
         threads = 32
         cache = {}
         
@@ -533,7 +534,7 @@ class Map:
             
             for tile in pool:
                 # request all needed images
-                thread.start_new_thread(tile.load, (lock, verbose, cache, fatbits_ok))
+                threading.Thread(target=tile.load, args=(lock, verbose, cache, fatbits_ok)).start()
                 
             # if it takes any longer than 20 sec overhead + 10 sec per tile, give up
             due = time.time() + 20 + len(pool) * 10
@@ -542,12 +543,12 @@ class Map:
                 # hang around until they are loaded or we run out of time...
                 time.sleep(1)
 
-        mapImg = Image.new('RGB', (img_width, img_height))
+        mapImg = Image.new('RGB', (img_width, img_height), color=(255, 255, 255))
         
         for tile in tiles:
             try:
                 for img in tile.images():
-                    mapImg.paste(img, (tile.offset.x, tile.offset.y), img)
+                    mapImg.paste(img, box=(tile.offset.x, tile.offset.y), mask=img)
             except:
                 # something failed to paste, so we ignore it
                 pass

@@ -1,8 +1,8 @@
 # placeholder module for form HTML parsing.
 
 import sys
-from urllib import urlopen
-from urlparse import urljoin
+from urllib.parse import urljoin
+from urllib.request import urlopen
 import json
 
 from BeautifulSoup import BeautifulSoup
@@ -38,7 +38,7 @@ def get_form_fields(url):
     for label in labels:
         label_contents.append({label.attrs[1][0]: label.attrs[1][1], 'contents': label.contents[0]})
     
-    #print label_contents
+    #print(label_contents)
     
     #
     # Handle text input boxes
@@ -51,7 +51,7 @@ def get_form_fields(url):
         textbox_description = {}               
         for index, label in enumerate(label_contents):
             if label_contents[index]['for'] == textbox['id']:
-                #print label_contents[index]['contents'].strip()
+                #print(label_contents[index]['contents'].strip())
                 textbox_description['label'] = label_contents[index]['contents'].strip()
                 break
                 
@@ -125,8 +125,8 @@ def main(apibase, password, form_id, url, fields_callback=None):
     try:
         form_data = get_form_fields(url)
     
-    except Exception, e:
-        print >> sys.stderr, 'Failed because:', e
+    except Exception as e:
+        print('Failed because:', e, file=sys.stderr)
         fail_form(apibase, password, form_id)
 
     else:

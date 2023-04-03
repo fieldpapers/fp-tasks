@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import sys
@@ -10,7 +10,7 @@ from tempfile import mkstemp
 from ModestMaps import mapByExtentZoom
 from ModestMaps.Geo import Location
 from ModestMaps.Providers import TemplatedMercatorProvider
-from raven import Client
+from sentry_sdk import capture_exception
 
 from cairoutils import get_drawing_context
 from compose import add_print_page, paper_info
@@ -24,10 +24,10 @@ def render_page(paper_size, orientation, layout, atlas_id, page_number, bounds, 
     # hm2pt_ratio = homogeneous point coordinate conversation ratio
     (page_width_pt, page_height_pt, points_FG, hm2pt_ratio) = paper_info(paper_size, orientation)
 
-    print >> sys.stderr, "Paper: %s/%s" % (paper_size, orientation)
-    print >> sys.stderr, "Width (pt): %f" % (page_width_pt)
-    print >> sys.stderr, "Height (pt): %f" % (page_height_pt)
-    print >> sys.stderr, "hm2pt ratio: %f" % (hm2pt_ratio)
+    print("Paper: %s/%s" % (paper_size, orientation), file=sys.stderr)
+    print("Width (pt): %f" % (page_width_pt), file=sys.stderr)
+    print("Height (pt): %f" % (page_height_pt), file=sys.stderr)
+    print("hm2pt ratio: %f" % (hm2pt_ratio), file=sys.stderr)
 
     # margins
 
@@ -41,7 +41,7 @@ def render_page(paper_size, orientation, layout, atlas_id, page_number, bounds, 
 
     page_href = "%satlases/%s/%s?bbox=%f,%f,%f,%f" % (API_BASE, atlas_id, page_number, west, south, east, north)
 
-    print >> sys.stderr, "page_href: %s" % (page_href)
+    print("page_href: %s" % (page_href), file=sys.stderr)
 
     page_mmap = mapByExtentZoom(TemplatedMercatorProvider(provider), Location(north, west), Location(south, east), zoom)
 
@@ -56,7 +56,7 @@ def render_page(paper_size, orientation, layout, atlas_id, page_number, bounds, 
         finish_drawing()
 
         # write to STDOUT
-        print open(print_filename).read()
+        sys.stdout.buffer.write(open(print_filename, 'rb').read())
 
     finally:
         unlink(print_filename)
@@ -105,10 +105,8 @@ if __name__ == '__main__':
         parser.print_help()
         exit(1)
 
-    client = Client()
-
     try:
         render_page(opts.paper_size, opts.orientation, opts.layout, args[0], opts.page_number, opts.bounds, opts.zoom, opts.provider, opts.text, opts.title)
-    except Exception, e:
-        client.captureException()
+    except Exception as e:
+        capture_exception()
         raise

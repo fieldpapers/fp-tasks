@@ -1,11 +1,10 @@
 from celery import Celery
-from raven import Client
+from sentry_sdk import capture_exception
 
 import compose, decode, forms
 
 
 celery = Celery('tasks', broker='redis://')
-client = Client()
 
 
 @celery.task
@@ -14,12 +13,12 @@ def decodeScan(apibase, password, **msg):
     """
     url = msg['url']
 
-    print 'Decoding scan', msg['scan_id']
+    print('Decoding scan', msg['scan_id'])
 
     try:
         decode.main(apibase, password, msg['scan_id'], url)
     except:
-        client.captureException()
+        capture_exception()
         raise
 
 
@@ -38,13 +37,13 @@ def composePrint(apibase, password, **msg):
             for page in msg['pages']:
                 page['text'] = (page.get('text', '').strip() + '\n\n' + forms.fields_as_text(fields['fields'])).strip()
         
-        print 'Composing print', msg['print_id'], 'and form', msg['form_id']
+        print('Composing print', msg['print_id'], 'and form', msg['form_id'])
 
         try:
             compose.main(apibase, password, **kwargs)
             forms.main(apibase, password, msg['form_id'], msg['form_url'], on_fields)
         except:
-            client.captureException()
+            capture_exception()
             raise
     
     else:
@@ -52,12 +51,12 @@ def composePrint(apibase, password, **msg):
             for page in msg['pages']:
                 page['text'] = (page.get('text', '').strip() + '\n\n' + forms.fields_as_text(msg['form_fields'])).strip()
     
-        print 'Composing print', msg['print_id']
+        print('Composing print', msg['print_id'])
 
         try:
             compose.main(apibase, password, **kwargs)
         except:
-            client.captureException()
+            capture_exception()
             raise
 
 
@@ -65,10 +64,10 @@ def composePrint(apibase, password, **msg):
 def parseForm(apibase, password, **msg):
     """
     """
-    print 'Parsing a form.'
+    print('Parsing a form.')
 
     try:
         return forms.main(apibase, password, msg['form_id'], msg['url'])
     except:
-        client.captureException()
+        capture_exception()
         raise
