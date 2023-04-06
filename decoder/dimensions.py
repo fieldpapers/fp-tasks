@@ -72,7 +72,7 @@ ratio_landscape_ltr = 1.456091
 # basic conversions between millimeters, points, and inches
 #
 mmppt = 0.352777778
-inppt = 0.013888889
+inppt = 1./72
 
 ptpin = 1./inppt
 ptpmm = 1./mmppt
