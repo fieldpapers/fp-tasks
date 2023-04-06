@@ -10,8 +10,8 @@
     "url": "https://github.com/fieldpapers/fp-tasks.git"
   },
   "engines": {
-    "node": "16.16.0",
-    "npm": "~8"
+    "node": "~18.15.0",
+    "npm": "~9"
   },
   "dependencies": {
     "async": "^3.2.4",

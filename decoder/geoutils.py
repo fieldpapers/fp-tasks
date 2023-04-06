@@ -1,10 +1,7 @@
-from sys import stderr
 from tempfile import mkstemp
-from os import close, unlink
+from os import unlink
 from math import hypot
-from subprocess import Popen, PIPE
-import sys
-from osgeo import osr
+from osgeo import osr, gdal
 
 try:
     from PIL import Image
@@ -25,40 +22,32 @@ epsg900913 = '+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +
 def calculate_gcps(p2s, paper_width_pt, paper_height_pt, north, west, south, east):
     """
     """
-    merc = osr.SpatialReference()
-    merc.ImportFromProj4(epsg900913)
-    
-    latlon = osr.SpatialReference()
-    latlon.ImportFromEPSG(4326)
-    
-    proj = osr.CoordinateTransformation(latlon, merc)
-    
-    # x, y in mercator meters
-    ul_x, ul_y, ul_z = proj.TransformPoint(west, north)
-    ur_x, ur_y, ur_z = proj.TransformPoint(east, north)
-    lr_x, lr_y, lr_z = proj.TransformPoint(east, south)
-    ll_x, ll_y, ll_z = proj.TransformPoint(west, south)
     
     # x, y in printed points
-    ll_pt = Point(1 * ptpin - paper_width_pt, 0)
-    ul_pt = Point(1 * ptpin - paper_width_pt, 1.5 * ptpin - paper_height_pt)
-    ur_pt = Point(0, 1.5 * ptpin - paper_height_pt)
-    lr_pt = Point(0, 0)
+    right_pt = 0
+    left_pt = -paper_width_pt + 1 * ptpin
+    lower_pt = 0
+    upper_pt = -paper_height_pt + 1.5 * ptpin
+    
+    ll_pt = Point(left_pt, lower_pt)
+    ul_pt = Point(left_pt, upper_pt)
+    ur_pt = Point(right_pt, upper_pt)
+    lr_pt = Point(right_pt, lower_pt)
     
     # x, y in image pixels
     ul_px, ur_px, lr_px, ll_px = [p2s(pt) for pt in (ul_pt, ur_pt, lr_pt, ll_pt)]
     
-    ul_gcp = (ul_x, ul_y, ul_px.x, ul_px.y)
-    ur_gcp = (ur_x, ur_y, ur_px.x, ur_px.y)
-    lr_gcp = (lr_x, lr_y, lr_px.x, lr_px.y)
-    ll_gcp = (ll_x, ll_y, ll_px.x, ll_px.y)
+    ul_gcp = gdal.GCP(west, north, 0, ul_px.x, ul_px.y)
+    ur_gcp = gdal.GCP(east, north, 0, ur_px.x, ur_px.y)
+    lr_gcp = gdal.GCP(east, south, 0, lr_px.x, lr_px.y)
+    ll_gcp = gdal.GCP(west, south, 0, ll_px.x, ll_px.y)
     
-    return ul_gcp, ur_gcp, lr_gcp, ll_gcp
+    return [ul_gcp, ur_gcp, lr_gcp, ll_gcp]
 
 def calculate_geotransform(gcps, full_width, fuller_width, buffer):
     """ Return a geotransform tuple that puts the GCPs into a chosen image size.
     """
-    xs, ys = [gcp[0] for gcp in gcps], [gcp[1] for gcp in gcps]
+    xs, ys = [gcp.GCPX for gcp in gcps], [gcp.GCPY for gcp in gcps]
     xmin, ymin, xmax, ymax = min(xs), min(ys), max(xs), max(ys)
 
     xspan = xmax - xmin
@@ -109,34 +98,25 @@ def create_geotiff(image, p2s, paper_width_pt, paper_height_pt, north, west, sou
     
     try:
         image.save(png_filename)
+
+        gdal.Translate(
+            vrt_filename, # destination
+            png_filename,  # source
+            format='VRT',
+            outputSRS='EPSG:4326',
+            GCPs=gcps
+        )
         
-        translate = 'gdal_translate -of VRT'.split()
-        
-        for (e, n, x, y) in gcps:
-            translate += ('-gcp %(x).1f %(y).1f %(e).1f %(n).1f' % locals()).split()
-        
-        translate += ['-a_srs', epsg900913]
-        translate += [png_filename, vrt_filename]
-        
-        print('%', ' '.join(translate), file=sys.stderr)
-        
-        translate = Popen(translate, stdout=PIPE)
-        translate.wait()
-        
-        if translate.returncode:
-            raise Exception(translate.returncode)
-        
-        warp1 = 'gdalwarp -of GTiff -t_srs EPSG:3857 -tps -co COMPRESS=deflate -co TILED=yes'.split()
-        warp1 += ['-dstnodata', '153 153 153']
-        warp1 += [vrt_filename, tif1_filename]
-        
-        print('%', ' '.join(warp1), file=sys.stderr)
-        
-        warp1 = Popen(warp1, stdout=PIPE)
-        warp1.wait()
-        
-        if warp1.returncode:
-            raise Exception(warp1.returncode)
+        gdal.Warp(
+            tif1_filename, # destination
+            vrt_filename,  # source
+            format='GTiff',
+            srcSRS='EPSG:4326',
+            dstSRS='EPSG:3857',
+            tps=True,
+            dstNodata='153 153 153',
+            creationOptions=['COMPRESS=deflate', 'TILED=yes']
+        )
         
         #
         # Read the raw bytes of the GeoTIFF for return.
@@ -147,20 +127,17 @@ def create_geotiff(image, p2s, paper_width_pt, paper_height_pt, north, west, sou
         # Do another one, smaller this time for the projected JPEG.
         #
         xform, img_bounds, img_size = calculate_geotransform(gcps, 760, 960, 100)
-        
-        warp2 = 'gdalwarp -of GTiff -tps'.split()
-        warp2 += ('-te %.1f %.1f %.1f %.1f' % img_bounds).split()
-        warp2 += ('-ts %d %d' % img_size).split()
-        warp2 += ['-dstnodata', '153 153 153']
-        warp2 += [vrt_filename, tif2_filename]
-        
-        print('%', ' '.join(warp2), file=sys.stderr)
-        
-        warp2 = Popen(warp2, stdout=PIPE)
-        warp2.wait()
-        
-        if warp2.returncode:
-            raise Exception(warp2.returncode)
+
+        gdal.Warp(
+            tif2_filename, # destination
+            vrt_filename,  # source
+            format='GTiff',
+            tps=True,
+            dstNodata='153 153 153',
+            outputBounds=img_bounds,
+            width=img_size[0],
+            height=img_size[1]
+        )
         
         geojpeg_img = Image.open(tif2_filename)
         geojpeg_img.save(jpg_filename)
@@ -181,7 +158,7 @@ def create_geotiff(image, p2s, paper_width_pt, paper_height_pt, north, west, sou
     latlon = osr.SpatialReference()
     latlon.ImportFromEPSG(4326)
     
-    proj = osr.CoordinateTransformation(merc, latlon)
+    proj = osr.CreateCoordinateTransformation(merc, latlon)
     
     x1, y1, x2, y2 = img_bounds
     lon1, lat1, z1 = proj.TransformPoint(x1, y1)
