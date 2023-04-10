@@ -14,8 +14,8 @@
     "npm": "~9"
   },
   "scripts": {
-    "lint": "eslint lib --ext js",
-    "lint:fix": "eslint lib --ext js --fix"
+    "lint": "eslint . --ext js",
+    "lint:fix": "eslint . --ext js --fix"
   },
   "dependencies": {
     "@sentry/node": "^7.46.0",
