@@ -19,12 +19,12 @@ ENV NODE_ENV production
 ENV AWS_REGION us-east-1
 WORKDIR /app
 
-COPY package.json /app/
-RUN npm install
-
 COPY blobdetector /app/blobdetector
 COPY decoder/requirements.txt /app/decoder/requirements.txt
 RUN python3 -m pip install -r /app/decoder/requirements.txt
+
+COPY package.json /app/
+RUN npm install
 
 COPY . /app/
 
