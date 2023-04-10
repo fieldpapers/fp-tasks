@@ -8,7 +8,8 @@
     "overrides": [
     ],
     "parserOptions": {
-        "ecmaVersion": "latest"
+        "ecmaVersion": "latest",
+        "sourceType": "module"
     },
     "rules": {
         "accessor-pairs": "error",
@@ -40,6 +41,7 @@
         "no-extend-native": "error",
         "no-extra-bind": "error",
         "no-extra-label": "error",
+        "no-extra-semi": "warn",
         "no-floating-decimal": "error",
         "no-global-assign": "error",
         "no-implicit-coercion": ["warn", { "boolean": false, "number": false }],

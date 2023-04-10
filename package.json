@@ -5,6 +5,7 @@
   "main": "index.js",
   "author": "Seth Fitzsimmons <seth@mojodna.net>",
   "license": "ISC",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/fieldpapers/fp-tasks.git"

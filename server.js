@@ -1,20 +1,19 @@
 #!/usr/bin/env node
-"use strict";
 
-const assert = require("assert"),
-  os = require("os"),
-  util = require("util");
+import assert from "assert";
+import os from "os";
+import util from "util";
 
-const async = require("async"),
-  bodyParser = require("body-parser"),
-  changeCase = require("change-case"),
-  express = require("express"),
-  morgan = require("morgan"),
-  Sentry = require("@sentry/node"),
-  request = require("request"),
-  responseTime = require("response-time");
+import async from "async";
+import bodyParser from "body-parser";
+import changeCase from "change-case";
+import express from "express";
+import morgan from "morgan";
+import request from "request";
+import Sentry from "@sentry/node";
+import responseTime from "response-time";
 
-const tasks = require("./lib/tasks");
+import * as tasks from "./lib/tasks/index.js";
 
 const app = express().disable("x-powered-by");
 
