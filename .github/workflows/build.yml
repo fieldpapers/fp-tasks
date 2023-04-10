@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: Build
 
 on:
   push:
@@ -14,5 +14,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - run: npm install
+    - run: npm run lint
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag fp-tasks:$(date +%s)

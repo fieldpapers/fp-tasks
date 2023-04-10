@@ -13,6 +13,10 @@
     "node": "~18.15.0",
     "npm": "~9"
   },
+  "scripts": {
+    "lint": "eslint lib --ext js",
+    "lint:fix": "eslint lib --ext js --fix"
+  },
   "dependencies": {
     "@sentry/node": "^7.46.0",
     "async": "^3.2.4",
@@ -32,7 +36,6 @@
     "xml2js": "^0.4.23"
   },
   "devDependencies": {
-    "babel-eslint": "^4.1.6",
-    "eslint": "^1.10.3"
+    "eslint": "^8.38.0"
   }
 }
