@@ -95,7 +95,7 @@
         "no-warning-comments": "warn",
         "no-whitespace-before-property": "warn",
         "no-with": "error",
-        "padded-blocks": ["error", "never"],
+        "padded-blocks": ["warn", "never"],
         "quote-props": ["error", "as-needed"],
         "quotes": ["error", "double"],
         "radix": ["error", "always"],
