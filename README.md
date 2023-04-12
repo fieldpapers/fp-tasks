@@ -29,3 +29,10 @@ docker run --rm \
 * `STATIC_URI_PREFIX` - Prefix to apply to static paths (e.g.
   http://example.org/path) to allow them to resolve. Required if using `local`
   persistence.
+
+## Quick links
+- [🔗 fieldpapers.org](https://fieldpapers.org)
+- [📋 Project overview](https://github.com/fieldpapers)
+- [🐞 Issues and bug reports](https://github.com/fieldpapers/fieldpapers/issues)
+- [🌐 Translations](https://explore.transifex.com/fieldpapers/fieldpapers/)
+- [🤝 Code of Conduct](https://wiki.openstreetmap.org/wiki/Foundation/Local_Chapters/United_States/Code_of_Conduct_Committee/OSM_US_Code_of_Conduct)
