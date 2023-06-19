@@ -5,5 +5,5 @@ gdal>=3.2.2
 pillow>=9.2.0
 requests>=2.25.1
 numpy~=1.24.2
-sentry~=23.3.1
+sentry~=23.6.1
 ./blobdetector
