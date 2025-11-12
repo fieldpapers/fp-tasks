@@ -1,4 +1,4 @@
-pycairo~=1.23.0
+pycairo~=1.24.0
 # actual gdal version is determined by ubuntu (`gdal-config --version`) 
 gdal>=3.2.2
 # pillow and requests versions are dependent on sentry
