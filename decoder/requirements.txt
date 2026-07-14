@@ -1,8 +1,8 @@
-pycairo~=1.23.0
-# must exactly match the libgdal version in the base image (`gdal-config --version`);
-# Debian bullseye (node:18) ships 3.2.2
+pycairo==1.23.0
+# gdal must exactly match the libgdal version in the base image
+# (`gdal-config --version`); Debian bullseye (node:18) ships 3.2.2
 gdal==3.2.2
-pillow>=9.2.0
-requests>=2.25.1
-numpy~=1.24.2
+pillow==9.2.0
+requests==2.25.1
+numpy==1.24.2
 ./blobdetector

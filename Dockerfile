@@ -23,8 +23,8 @@ COPY blobdetector /app/blobdetector
 COPY decoder/requirements.txt /app/decoder/requirements.txt
 RUN python3 -m pip install -r /app/decoder/requirements.txt
 
-COPY package.json /app/
-RUN npm install
+COPY package.json package-lock.json /app/
+RUN npm ci --omit=dev
 
 COPY . /app/
 
