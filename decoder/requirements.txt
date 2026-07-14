@@ -1,9 +1,8 @@
 pycairo~=1.23.0
-# actual gdal version is determined by ubuntu (`gdal-config --version`) 
-gdal>=3.2.2
-# pillow and requests versions are dependent on sentry
+# must exactly match the libgdal version in the base image (`gdal-config --version`);
+# Debian bullseye (node:18) ships 3.2.2
+gdal==3.2.2
 pillow>=9.2.0
 requests>=2.25.1
 numpy~=1.24.2
-sentry~=23.3.1
 ./blobdetector

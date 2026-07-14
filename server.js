@@ -10,7 +10,6 @@ import changeCase from "change-case";
 import express from "express";
 import morgan from "morgan";
 import request from "request";
-import Sentry from "@sentry/node";
 import responseTime from "response-time";
 
 import * as tasks from "./lib/tasks/index.js";
@@ -26,17 +25,6 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 app.use(responseTime());
-
-if (process.env.SENTRY_DSN) {
-  Sentry.patchGlobal(function(logged, err) {
-    console.log("Uncaught error. Reporting to Sentry and exiting.");
-    console.error(err.stack);
-
-    process.exit(1);
-  });
-
-  app.use(Sentry.middleware.express());
-}
 
 app.use(bodyParser.json());
 
@@ -73,7 +61,6 @@ Object.keys(tasks).forEach(function(name) {
     taskQueue.push(function(callback) {
       return task(payload, function(err, rsp) {
         if (err) {
-          Sentry.captureException(err);
           return console.error(err.stack);
         }
 
@@ -87,10 +74,8 @@ Object.keys(tasks).forEach(function(name) {
         }, function(err, rsp, body) {
           if (err) {
             console.warn(err);
-            Sentry.captureException(err);
           } else if (rsp.statusCode < 200 || rsp.statusCode >= 300) {
             console.warn("%s returned %d:", callbackUrl, rsp.statusCode, body);
-            Sentry.captureMessage(util.format("%s returned %d:", callbackUrl, rsp.statusCode, body));
           }
 
           return callback();

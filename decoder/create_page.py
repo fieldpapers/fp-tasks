@@ -10,7 +10,6 @@ from tempfile import mkstemp
 from ModestMaps import mapByExtentZoom
 from ModestMaps.Geo import Location
 from ModestMaps.Providers import TemplatedMercatorProvider
-from sentry_sdk import capture_exception
 
 from cairoutils import get_drawing_context
 from compose import add_print_page, paper_info
@@ -105,8 +104,4 @@ if __name__ == '__main__':
         parser.print_help()
         exit(1)
 
-    try:
-        render_page(opts.paper_size, opts.orientation, opts.layout, args[0], opts.page_number, opts.bounds, opts.zoom, opts.provider, opts.text, opts.title)
-    except Exception as e:
-        capture_exception()
-        raise
+    render_page(opts.paper_size, opts.orientation, opts.layout, args[0], opts.page_number, opts.bounds, opts.zoom, opts.provider, opts.text, opts.title)

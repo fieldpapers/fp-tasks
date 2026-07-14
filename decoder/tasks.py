@@ -1,5 +1,4 @@
 from celery import Celery
-from sentry_sdk import capture_exception
 
 import compose, decode, forms
 
@@ -15,11 +14,7 @@ def decodeScan(apibase, password, **msg):
 
     print('Decoding scan', msg['scan_id'])
 
-    try:
-        decode.main(apibase, password, msg['scan_id'], url)
-    except:
-        capture_exception()
-        raise
+    decode.main(apibase, password, msg['scan_id'], url)
 
 
 @celery.task
@@ -39,12 +34,8 @@ def composePrint(apibase, password, **msg):
         
         print('Composing print', msg['print_id'], 'and form', msg['form_id'])
 
-        try:
-            compose.main(apibase, password, **kwargs)
-            forms.main(apibase, password, msg['form_id'], msg['form_url'], on_fields)
-        except:
-            capture_exception()
-            raise
+        compose.main(apibase, password, **kwargs)
+        forms.main(apibase, password, msg['form_id'], msg['form_url'], on_fields)
     
     else:
         if 'form_fields' in msg:
@@ -53,11 +44,7 @@ def composePrint(apibase, password, **msg):
     
         print('Composing print', msg['print_id'])
 
-        try:
-            compose.main(apibase, password, **kwargs)
-        except:
-            capture_exception()
-            raise
+        compose.main(apibase, password, **kwargs)
 
 
 @celery.task
@@ -66,8 +53,4 @@ def parseForm(apibase, password, **msg):
     """
     print('Parsing a form.')
 
-    try:
-        return forms.main(apibase, password, msg['form_id'], msg['url'])
-    except:
-        capture_exception()
-        raise
+    return forms.main(apibase, password, msg['form_id'], msg['url'])

@@ -15,8 +15,6 @@ except ImportError:
 else:
     from PIL import Image
 
-from sentry_sdk import capture_exception
-
 from decode import CodeReadException, get_paper_size, paper_matches, read_code
 from geoutils import create_geotiff
 from imagemath import imgblobs, open as imageopen
@@ -73,8 +71,4 @@ def generate_filenames():
 
 if __name__ == '__main__':
 
-    try:
-        sys.stdout.buffer.write(process_snapshot(sys.stdin))
-    except:
-        capture_exception()
-        raise
+    sys.stdout.buffer.write(process_snapshot(sys.stdin))
