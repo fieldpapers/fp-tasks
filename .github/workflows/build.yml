@@ -1,8 +1,9 @@
 name: Build
 
+# Lint and validate the image build on pull requests. Publishing the image on
+# main/tags is handled by ghcr.yml, so this does not run on push to avoid
+# building the (heavy) image twice.
 on:
-  push:
-    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
@@ -13,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v7
     - run: npm install
     - run: npm run lint
     - name: Build the Docker image
