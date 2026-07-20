@@ -31,6 +31,11 @@ def process_snapshot(input_file):
     image = Image.open(BytesIO(input))
     image.load()
 
+    # JPEG output and the 3-band nodata below assume RGB; uploads may be RGBA
+    # (e.g. a PNG screenshot) or palette-based.
+    if image.mode != "RGB":
+        image = image.convert("RGB")
+
     (_, _, north, west, south, east, _paper, _orientation, _) = read_code(input)
     blobs = imgblobs(image, highpass_filename, preblobs_filename, postblob_filename)
 
