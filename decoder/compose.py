@@ -1,19 +1,13 @@
 #!/usr/bin/env python3
 
 from math import pi
-from copy import copy
-from urllib.parse import urlencode
 from os.path import join as pathjoin, dirname, realpath
-from urllib.parse import urljoin, urlparse, parse_qs
-from os import close, write, unlink
-from optparse import OptionParser
-from io import BytesIO, StringIO
+from os import close, unlink
+from io import BytesIO
 from tempfile import mkstemp
 import subprocess
 import sys
 
-from ModestMaps import mapByExtent, mapByExtentZoom
-from ModestMaps.Providers import TemplatedMercatorProvider
 from ModestMaps.Geo import Location
 from ModestMaps.Core import Point
 
@@ -21,15 +15,13 @@ from cairo import ImageSurface
 
 from svgutils import create_cairo_font_face_for_file, place_image, draw_box, draw_circle, draw_cross, flow_text
 from dimensions import point_A, point_B, point_C, point_D, point_E, ptpin
-from apiutils import append_print_file, finish_print, update_print
-from cairoutils import get_drawing_context
 
 cached_fonts = dict()
 
 def get_qrcode_image(print_href):
     """ Render a QR code to an ImageSurface.
     """
-    qr_code = BytesIO(subprocess.Popen("qrencode -m 0 -s 19 -o - %s" % (print_href), shell=True, stdout=subprocess.PIPE).stdout.read())
+    qr_code = BytesIO(subprocess.run(['qrencode', '-m', '0', '-s', '19', '-o', '-', print_href], stdout=subprocess.PIPE, check=True).stdout)
 
     return ImageSurface.create_from_png(qr_code)
 
@@ -61,16 +53,6 @@ def paper_info(paper_size, orientation):
     ratio = getattr(dim, 'ratio_%(orientation)s_%(paper_size)s' % locals())
 
     return width, height, (point_F, point_G), ratio
-
-def get_preview_map_size(orientation, paper_size):
-    """
-    """
-    dim = __import__('dimensions')
-
-    paper_size = {'letter': 'ltr', 'a4': 'a4', 'a3': 'a3'}[paper_size.lower()]
-    width, height = getattr(dim, 'preview_size_%(orientation)s_%(paper_size)s' % locals())
-
-    return int(width), int(height)
 
 def add_page_text(ctx, text, x, y, width, height):
     """
@@ -394,162 +376,3 @@ def add_print_page(ctx, mmap, href, well_bounds_pt, points_FG, hm2pt_ratio, layo
             ctx.show_text(number)
 
     ctx.show_page()
-
-parser = OptionParser()
-
-parser.set_defaults(bounds=(37.81211263, -122.26755482, 37.80641650, -122.25725514),
-                    zoom=16, paper_size='letter', orientation='landscape',
-                    provider='http://tile.openstreetmap.org/{Z}/{X}/{Y}.png')
-
-papers = 'a3 a4 letter'.split()
-orientations = 'landscape portrait'.split()
-
-parser.add_option('-s', '--paper-size', dest='paper_size',
-                  help='Choice of papers: %s.' % ', '.join(papers),
-                  choices=papers)
-
-parser.add_option('-o', '--orientation', dest='orientation',
-                  help='Choice of orientations: %s.' % ', '.join(orientations),
-                  choices=orientations)
-
-parser.add_option('-b', '--bounds', dest='bounds',
-                  help='Choice of bounds: north, west, south, east.',
-                  type='float', nargs=4)
-
-parser.add_option('-z', '--zoom', dest='zoom',
-                  help='Map zoom level.',
-                  type='int')
-
-parser.add_option('-p', '--provider', dest='provider',
-                  help='Map provider in URL template form.')
-
-def main(apibase, password, print_id, pages, paper_size, orientation, layout):
-    """
-    """
-    print_path = 'atlas.php?' + urlencode({'id': print_id})
-    print_href = print_id and urljoin(apibase.rstrip('/')+'/', print_path) or None
-    print_info = {}
-
-    #
-    # Prepare a shorthands for pushing data.
-    #
-
-    _append_file = lambda name, body: print_id and append_print_file(print_id, name, body, apibase, password) or None
-    _finish_print = lambda print_info: print_id and finish_print(apibase, password, print_id, print_info) or None
-    _update_print = lambda progress: print_id and update_print(apibase, password, print_id, progress) or None
-
-    print('Print:', print_id, file=sys.stderr)
-    print('Paper:', orientation, paper_size, layout, file=sys.stderr)
-
-    #
-    # Prepare output context.
-    #
-
-    handle, print_filename = mkstemp(suffix='.pdf')
-    close(handle)
-
-    page_width_pt, page_height_pt, points_FG, hm2pt_ratio = paper_info(paper_size, orientation)
-    print_context, finish_drawing = get_drawing_context(print_filename, page_width_pt, page_height_pt)
-
-    try:
-        map_xmin_pt = .5 * ptpin
-        map_ymin_pt = 1 * ptpin
-        map_xmax_pt = page_width_pt - .5 * ptpin
-        map_ymax_pt = page_height_pt - .5 * ptpin
-
-        map_bounds_pt = map_xmin_pt, map_ymin_pt, map_xmax_pt, map_ymax_pt
-
-        #
-        # Add pages to the PDF one by one.
-        #
-
-        for (index, page) in enumerate(pages):
-            _update_print(0.1 + 0.9 * float(index) / len(pages))
-
-            page_href = print_href and (print_href + '/%(number)s' % page) or None
-
-            provider = TemplatedMercatorProvider(page['provider'])
-            zoom = page['zoom']
-
-            mark = page.get('mark', None) or None
-            fuzzy = page.get('fuzzy', None) or None
-            text = unicode(page.get('text', None) or '').encode('utf8')
-            role = page.get('role', None) or None
-
-            north, west, south, east = page['bounds']
-            northwest = Location(north, west)
-            southeast = Location(south, east)
-
-            page_mmap = mapByExtentZoom(provider, northwest, southeast, zoom)
-
-            if role == 'index':
-                indexees = [pages[other] for other in range(len(pages)) if other != index]
-            else:
-                indexees = []
-
-            add_print_page(print_context, page_mmap, page_href, map_bounds_pt, points_FG, hm2pt_ratio, layout, text, mark, fuzzy, indexees)
-
-            #
-            # Now make a smaller preview map for the page,
-            # 600px looking like a reasonable upper bound.
-            #
-
-            preview_mmap = copy(page_mmap)
-
-            while preview_mmap.dimensions.x > 600:
-                preview_zoom = preview_mmap.coordinate.zoom - 1
-                preview_mmap = mapByExtentZoom(provider, northwest, southeast, preview_zoom)
-
-            out = StringIO()
-            preview_mmap.draw(fatbits_ok=True).save(out, format='JPEG', quality=85)
-            preview_url = _append_file('preview-p%(number)s.jpg' % page, out.getvalue())
-            print_info['pages[%(number)s][preview_url]' % page] = preview_url
-
-        #
-        # Complete the PDF and upload it.
-        #
-
-        finish_drawing()
-
-        pdf_name = 'field-paper-%s.pdf' % print_id
-        pdf_url = _append_file(pdf_name, open(print_filename, 'r').read())
-        print_info['pdf_url'] = pdf_url
-
-    except:
-        raise
-
-    finally:
-        unlink(print_filename)
-
-    #
-    # Make a small preview map of the whole print coverage area.
-    #
-
-    provider = TemplatedMercatorProvider(pages[0]['provider'])
-
-    norths, wests, souths, easts = zip(*[page['bounds'] for page in pages])
-    northwest = Location(max(norths), min(wests))
-    southeast = Location(min(souths), max(easts))
-
-    dimensions = Point(*get_preview_map_size(orientation, paper_size))
-
-    preview_mmap = mapByExtent(provider, northwest, southeast, dimensions)
-
-    out = StringIO()
-    preview_mmap.draw(fatbits_ok=True).save(out, format='JPEG', quality=85)
-    preview_url = _append_file('preview.jpg' % page, out.getvalue())
-    print_info['preview_url'] = preview_url
-
-    #
-    # All done, wrap it up.
-    #
-
-    _finish_print(print_info)
-
-
-if __name__ == '__main__':
-
-    opts, args = parser.parse_args()
-
-    for d in main(None, None, None, opts.paper_size, opts.orientation, None, opts.provider, opts.bounds, opts.zoom):
-        pass

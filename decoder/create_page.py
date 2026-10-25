@@ -16,7 +16,7 @@ from compose import add_print_page, paper_info
 from dimensions import ptpin
 
 
-API_BASE = os.getenv('API_BASE_URL', 'http://fieldpapers.org/')
+API_BASE = os.getenv('API_BASE_URL', 'https://fieldpapers.org/')
 
 
 def render_page(paper_size, orientation, layout, atlas_id, page_number, bounds, zoom, provider, text, title):

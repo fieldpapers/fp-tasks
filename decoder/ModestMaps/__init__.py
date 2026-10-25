@@ -67,7 +67,8 @@ import os.path
 __version__ = open(os.path.join(os.path.dirname(__file__), 'VERSION')).read().strip()
 
 import sys
-import urllib
+import urllib.parse
+import urllib.request
 from io import BytesIO
 import math
 import threading
