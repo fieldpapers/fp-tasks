@@ -4,8 +4,8 @@ ENV HOME=/app
 ENV AWS_REGION=us-east-1
 
 # System dependencies:
-# - build-essential/pkg-config/libpython3-dev: build the blobdetector C++ extension
-#   (and gdal/pycairo, which pip builds from source)
+# - build-essential/pkg-config/libpython3-dev: build gdal and pycairo, which pip
+#   builds from source
 # - gdal/cairo/zbar: the Python geo + QR stack (gdal pin in requirements.txt must
 #   match this image's libgdal; bullseye ships 3.2.2)
 # - ghostscript/imagemagick/qrencode: CLI tools the service and decoder scripts
@@ -24,7 +24,6 @@ RUN sed -i 's|deb.debian.org|archive.debian.org|g' /etc/apt/sources.list && \
 
 WORKDIR /app
 
-COPY blobdetector /app/blobdetector
 COPY requirements.txt /app/requirements.txt
 RUN python3 -m pip install -r /app/requirements.txt
 

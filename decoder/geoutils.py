@@ -8,16 +8,9 @@ from dimensions import ptpin
 def calculate_gcps(p2s, paper_width_pt, paper_height_pt, north, west, south, east):
     """
     """
-
-    # For some reason we need to offset the GCPs horizontally by the diameter
-    # of the register marks following the package updates in
-    # https://github.com/fieldpapers/fp-tasks/commit/1280ba97dbabcde7574b0b5b06aa1312e144495b
-    # TODO: replace this magic number with an actual fix 
-    blob_offset_pt = 17
-    
     # x, y in printed points
-    right_pt = -blob_offset_pt
-    left_pt = -paper_width_pt + 1 * ptpin - blob_offset_pt
+    right_pt = 0
+    left_pt = -paper_width_pt + 1 * ptpin
     lower_pt = 0
     upper_pt = -paper_height_pt + 1.5 * ptpin
     

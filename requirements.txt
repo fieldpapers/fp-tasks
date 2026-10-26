@@ -9,4 +9,4 @@ gdal==3.2.2
 numpy==1.24.2
 pillow==9.2.0
 pycairo==1.23.0
-./blobdetector
+scipy==1.13.1
