@@ -4,16 +4,9 @@ import os
 import sys
 
 from optparse import OptionParser
-from os import close, unlink
 from io import BytesIO
-from tempfile import mkstemp
 
-try:
-    import PIL
-except ImportError:
-    import Image
-else:
-    from PIL import Image
+from PIL import Image
 
 from decode import get_paper_size, paper_matches
 from geoutils import create_geotiff
@@ -33,24 +26,18 @@ def process_snapshot(input, bounds, paper, orientation, layout):
     page's (north, west, south, east); paper, orientation, and layout are its
     atlas's. Returns GeoTIFF bytes.
     """
-    (highpass_filename, preblobs_filename, postblob_filename) = generate_filenames()
-
     image = Image.open(BytesIO(input))
     image.load()
 
-    # JPEG output and the 3-band nodata below assume RGB; uploads may be RGBA
-    # (e.g. a PNG screenshot) or palette-based.
+    # create_geotiff's 3-band nodata assumes RGB; uploads may be RGBA (e.g. a
+    # PNG screenshot) or palette-based.
     if image.mode != "RGB":
         image = image.convert("RGB")
 
     (north, west, south, east) = page_bounds(bounds, orientation, layout)
-    blobs = imgblobs(image, highpass_filename, preblobs_filename, postblob_filename)
+    blobs = imgblobs(image)
 
-    unlink(highpass_filename)
-    unlink(preblobs_filename)
-    unlink(postblob_filename)
-
-    for (s2p, _paper, _orientation, blobs_abcde) in paper_matches(blobs):
+    for (s2p, _paper, _orientation) in paper_matches(blobs):
         print(_paper, _orientation, '--', s2p, file=sys.stderr)
 
         if (paper, orientation) != (_paper, _orientation):
@@ -59,9 +46,7 @@ def process_snapshot(input, bounds, paper, orientation, layout):
         (paper_width_pt, paper_height_pt) = get_paper_size(paper, orientation)
         geo_args = (paper_width_pt, paper_height_pt, north, west, south, east)
 
-        (geotiff_bytes, _, _) = create_geotiff(image, s2p.inverse(), *geo_args)
-
-        return geotiff_bytes
+        return create_geotiff(image, s2p.inverse(), *geo_args)
 
     raise SnapshotError('could not process source image')
 
@@ -85,19 +70,6 @@ def page_bounds(bounds, orientation, layout):
         print('Kept', orientation, layout, 'bounds at %.6f, %.6f, %.6f, %.6f' % (north, west, south, east), file=sys.stderr)
 
     return (north, west, south, east)
-
-
-def generate_filenames():
-    (handle, highpass_filename) = mkstemp(prefix='highpass-', suffix='.jpg')
-    close(handle)
-
-    (handle, preblobs_filename) = mkstemp(prefix='preblobs-', suffix='.jpg')
-    close(handle)
-
-    (handle, postblob_filename) = mkstemp(prefix='postblob-', suffix='.png')
-    close(handle)
-
-    return (highpass_filename, preblobs_filename, postblob_filename)
 
 
 if __name__ == '__main__':

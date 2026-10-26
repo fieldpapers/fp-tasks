@@ -1,25 +1,12 @@
 from math import e
 
-try:
-    import PIL
-except ImportError:
-    import Image
-    from ImageDraw import ImageDraw
-    from Image import ANTIALIAS, AFFINE, BICUBIC
-    from ImageOps import autocontrast
-    from ImageFilter import MinFilter, MaxFilter
-else:
-    from PIL import Image
-    from PIL.ImageDraw import ImageDraw
-    from PIL.Image import ANTIALIAS, AFFINE, BICUBIC
-    from PIL.ImageOps import autocontrast
-    from PIL.ImageFilter import MinFilter, MaxFilter
+from PIL import Image
+from PIL.ImageOps import autocontrast
+from PIL.ImageFilter import MinFilter, MaxFilter
 
-from numpy import array, fromstring, ubyte, convolve
+from numpy import array, ubyte, convolve
 
 from BlobDetector import detect
-from matrixmath import Point, triangle2triangle
-from featuremath import Transform
 
 class Blob:
     """
@@ -38,7 +25,7 @@ class Blob:
         
         self.bbox = (xmin, ymin, xmax, ymax)
 
-def imgblobs(img, highpass_filename=None, preblobs_filename=None, postblobs_filename=None):
+def imgblobs(img):
     """ Extract bboxes of blobs from an image.
     
         Assumes blobs somewhere in the neighborhood of 0.25" or so
@@ -47,7 +34,7 @@ def imgblobs(img, highpass_filename=None, preblobs_filename=None, postblobs_file
         Each blob is a bbox: (xmin, ymin, xmax, ymax)
     """
     thumb = img.copy().convert('L')
-    thumb.thumbnail((1500, 1500), ANTIALIAS)
+    thumb.thumbnail((1500, 1500), Image.LANCZOS)
     
     # needed to get back up to input image size later.
     scale = float(img.size[0]) / float(thumb.size[0])
@@ -62,17 +49,8 @@ def imgblobs(img, highpass_filename=None, preblobs_filename=None, postblobs_file
     thumb = lowpass(thumb, 1)
     thumb = highpass(thumb, 16)
     
-    if highpass_filename:
-        thumb.save(highpass_filename)
-    
     thumb = thumb.point(lambda p: (p < 116) and 0xFF or 0x00)
     thumb = thumb.filter(MinFilter(5)).filter(MaxFilter(5))
-    
-    if preblobs_filename:
-        thumb.save(preblobs_filename)
-    
-    ident = img.copy().convert('L').convert('RGB')
-    draw = ImageDraw(ident)
     
     blobs = []
     
@@ -103,13 +81,7 @@ def imgblobs(img, highpass_filename=None, preblobs_filename=None, postblobs_file
             # too stretched
             continue
         
-        draw.rectangle(blob.bbox, outline=(0xFF, 0, 0))
-        draw.text(blob.bbox[2:4], str(len(blobs)), fill=(0x99, 0, 0))
-
         blobs.append(blob)
-    
-    if postblobs_filename:
-        ident.save(postblobs_filename)
     
     return blobs
 
@@ -164,45 +136,6 @@ def highpass(img, radius):
     
     return arr2img(high)
 
-def extract_image(scan2print, print_bbox, scan_img, dest_dim, step=50):
-    """ Extract a portion of a scan image by print coordinates.
-    
-        scan2print - transformation from scan pixels to original print.
-    """
-    dest_img = Image.new('RGB', dest_dim)
-    
-    #
-    # Compute transformation from print image bbox to destination image.
-    #
-    print2dest = triangle2triangle(Point(print_bbox[0], print_bbox[1]), Point(0, 0),
-                                   Point(print_bbox[0], print_bbox[3]), Point(0, dest_dim[1]),
-                                   Point(print_bbox[2], print_bbox[1]), Point(dest_dim[0], 0))
-
-    #
-    # Compute transformation from source image to destination image.
-    #
-    scan2dest = scan2print.multiply(print2dest)
-    
-    dest_w, dest_h = dest_dim
-    
-    for y in range(0, dest_h, step):
-        for x in range(0, dest_w, step):
-            # dimensions of current destination cell
-            w = min(step, dest_w - x)
-            h = min(step, dest_h - y)
-
-            # transformation from scan pixels to destination cell
-            m = scan2dest
-            m = m.multiply(Transform(1, 0, -x, 0, 1, -y))
-            m = m.inverse()
-            a = m.affine(0, 0, w, h)
-            
-            p = scan_img.transform((w, h), AFFINE, a, BICUBIC)
-            
-            dest_img.paste(p, (x, y))
-
-    return dest_img
-
 def arr2img(ar):
     """ Convert Numeric array to PIL Image.
     """
@@ -211,4 +144,4 @@ def arr2img(ar):
 def img2arr(im):
     """ Convert PIL Image to Numeric array.
     """
-    return fromstring(im.tobytes(), ubyte).reshape((im.size[1], im.size[0]))
+    return array(im, dtype=ubyte)

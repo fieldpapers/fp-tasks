@@ -15,11 +15,10 @@ ENV AWS_REGION=us-east-1
 RUN sed -i 's|deb.debian.org|archive.debian.org|g' /etc/apt/sources.list && \
     DEBIAN_FRONTEND=noninteractive apt-get update && \
     apt-get install -y --no-install-recommends \
-      ca-certificates git-core build-essential pkg-config \
+      ca-certificates build-essential pkg-config \
       python3 python3-pip libpython3-dev \
       gdal-bin libgdal-dev libcairo2-dev \
-      ghostscript imagemagick qrencode zbar-tools php-cli \
-      libpq-dev libxmlsec1 libxmlsec1-dev && \
+      ghostscript imagemagick qrencode zbar-tools php-cli && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

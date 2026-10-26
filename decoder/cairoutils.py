@@ -1,5 +1,5 @@
 import json
-from os import close, write, unlink, stat
+from os import close, unlink, stat
 from subprocess import Popen, PIPE
 from tempfile import mkstemp
 

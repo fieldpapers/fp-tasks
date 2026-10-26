@@ -1,8 +1,8 @@
-from math import sqrt as _sqrt, atan2 as _atan2, sin as _sin, cos as _cos, pi, hypot as _hypot
+from math import atan2 as _atan2, sin as _sin, cos as _cos, pi, hypot as _hypot
 from numpy import array as _array, repeat, reshape, nonzero, transpose, arctan2, sqrt as nsqrt
 from itertools import product, chain, repeat as _repeat
 
-from matrixmath import Point, Vector, Transform
+from matrixmath import Vector
 
 class Feature:
     """ Unmatched feature, probably in print coordinates.
@@ -71,11 +71,6 @@ class MatchedFeature:
 
         return True
     
-    def actuals(self):
-        """ Return actual ratio and theta for scan blobs.
-        """
-        return _normalize(self.s1, self.s2, self.s3)[3:5]
-
 def _normalize(p1, p2, p3):
     """ Return feature parts for a trio of points - re-ordered points, ratio, theta.
     """
@@ -305,66 +300,3 @@ def blobs2features(blobs, min_hypot=0, min_theta=-pi, max_theta=pi, min_ratio=0,
                 continue
             
             yield (i, j, k, ratio, theta)
-
-if __name__ == '__main__':
-
-    #
-    # Set up some fake blobs.
-    #
-    blobs = [Point(1, 1), Point(2, 5), Point(3, 2)]
-    count = len(blobs)
-    
-    a, b, c = blobs[0], blobs[1], blobs[2]
-    
-    dab = _sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2)
-    dbc = _sqrt((c.x - b.x) ** 2 + (c.y - b.y) ** 2)
-    dac = _sqrt((c.x - a.x) ** 2 + (c.y - a.y) ** 2)
-    
-    ratios = {(0, 1, 2): dac/dab, (1, 0, 2): dbc/dab, (2, 1, 0): dac/dbc}
-    
-    tab = _atan2(b.y - a.y, b.x - a.x)
-    tba = _atan2(a.y - b.y, a.x - b.x)
-    tac = _atan2(c.y - a.y, c.x - a.x)
-    tca = _atan2(a.y - c.y, a.x - c.x)
-    tbc = _atan2(c.y - b.y, c.x - b.x)
-    tcb = _atan2(b.y - c.y, b.x - c.x)
-    
-    thetas = {
-        (0, 1, 2): _atan2((c.x - a.x) * _sin(-tab) + (c.y - a.y) * _cos(-tab),
-                          (c.x - a.x) * _cos(-tab) - (c.y - a.y) * _sin(-tab)),
-        
-        (1, 0, 2): _atan2((c.x - b.x) * _sin(-tba) + (c.y - b.y) * _cos(-tba),
-                          (c.x - b.x) * _cos(-tba) - (c.y - b.y) * _sin(-tba)),
-        
-        (0, 2, 1): _atan2((b.x - a.x) * _sin(-tac) + (b.y - a.y) * _cos(-tac),
-                          (b.x - a.x) * _cos(-tac) - (b.y - a.y) * _sin(-tac)),
-        
-        (2, 0, 1): _atan2((b.x - c.x) * _sin(-tca) + (b.y - c.y) * _cos(-tca),
-                          (b.x - c.x) * _cos(-tca) - (b.y - c.y) * _sin(-tca)),
-        
-        (1, 2, 0): _atan2((a.x - b.x) * _sin(-tbc) + (a.y - b.y) * _cos(-tbc),
-                          (a.x - b.x) * _cos(-tbc) - (a.y - b.y) * _sin(-tbc)),
-        
-        (2, 1, 0): _atan2((a.x - c.x) * _sin(-tcb) + (a.y - c.y) * _cos(-tcb),
-                          (a.x - c.x) * _cos(-tcb) - (a.y - c.y) * _sin(-tcb))
-      }
-    
-    
-    for (i, j, k, ratio, theta) in blobs2features(blobs, 0, -pi, pi, 0, 1):
-        assert round(ratios[(i, j, k)], 9) == round(ratio, 9), '%.9f vs. %.9f in (%d,%d,%d)' % (ratio, ratios[(i, j, k)], i, j, k)
-        assert round(thetas[(i, j, k)], 9) == round(theta, 9), '%.9f vs. %.9f in (%d,%d,%d)' % (theta, thetas[(i, j, k)], i, j, k)
-
-    features = [Feature(Point(.575, .575), Point(.575, 10.425), Point(7.925, 10.425)),
-                Feature(Point(.575, .575), Point(7.925, 10.425), Point(.575, 10.425)),
-                Feature(Point(7.925, 10.425), Point(.575, .575), Point(.575, 10.425))]
-    
-    for feature in features:
-        assert round(feature.ratio, 9) == 0.801462218, '%.9f vs. %.9f' % (feature.ratio, 0.80146221760756842)
-        assert round(feature.theta, 9) == 0.641060105, '%.9f vs. %.9f' % (feature.theta, 0.64106010469117158)
-
-    gen = stream_triples('abc', (1, 2, 3), ('do', 're', 'mi'))
-    triples = [gen.next() for i in range(1000)]
-
-    assert ('a', 1, 'do') in triples
-    assert ('b', 2, 're') in triples
-    assert ('c', 3, 'mi') in triples

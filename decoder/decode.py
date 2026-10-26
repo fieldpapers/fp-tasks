@@ -60,11 +60,8 @@ def paper_matches(blobs):
             #
             h2p = Transform(scale, 0, 0, 0, scale, 0)
             s2p = s2h.multiply(h2p)
-            
-            # useful for drawing post-blobs image
-            blobs_abcde = aed_match.s1, dbc_match.s2, dbc_match.s3, dbc_match.s1, aed_match.s2
-            
-            yield s2p, paper_size, orientation, blobs_abcde
+
+            yield s2p, paper_size, orientation
 
 def _blob_matches_primary(blobs):
     """ Generate known matches for DBC (top) and AED (bottom) triangle pairs.
@@ -78,8 +75,6 @@ def _blob_matches_primary(blobs):
     eac_theta, eac_ratio = feature_eac.theta, feature_eac.ratio
     
     dbc_matches = blobs2features(blobs, min_size, *theta_ratio_bounds(dbc_theta, theta_tol, dbc_ratio, ratio_tol))
-    
-    seen_groups, max_skipped, skipped_groups = set(), 100, 0
     
     for dbc_tuple in dbc_matches:
         i0, j0, k0 = dbc_tuple[0:3]
@@ -151,7 +146,7 @@ def _blob_matches_secondary(blobs, aed_match):
     from dimensions import feature_g_landscape_a3, point_G_landscape_a3, feature_f_landscape_a3, point_F_landscape_a3
     from dimensions import feature_g_portrait_a3, point_G_portrait_a3, feature_f_portrait_a3, point_F_portrait_a3
 
-    from dimensions import min_size, theta_tol, ratio_tol
+    from dimensions import theta_tol, ratio_tol
 
     features_fg = (
         (feature_g_landscape_ltr, point_G_landscape_ltr, feature_f_landscape_ltr, point_F_landscape_ltr),

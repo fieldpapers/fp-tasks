@@ -13,7 +13,7 @@ from ModestMaps.Core import Point
 
 from cairo import ImageSurface
 
-from svgutils import create_cairo_font_face_for_file, place_image, draw_box, draw_circle, draw_cross, flow_text
+from svgutils import create_cairo_font_face_for_file, place_image, draw_box, draw_circle, flow_text
 from dimensions import point_A, point_B, point_C, point_D, point_E, ptpin
 
 cached_fonts = dict()
@@ -181,7 +181,7 @@ def add_scale_bar(ctx, mmap, map_height_pt):
 
     ctx.restore()
 
-def add_print_page(ctx, mmap, href, well_bounds_pt, points_FG, hm2pt_ratio, layout, text, mark, fuzzy, indexees, title):
+def add_print_page(ctx, mmap, href, well_bounds_pt, points_FG, hm2pt_ratio, layout, text, indexees, title):
     """
     """
     print('Adding print page:', href, file=sys.stderr)
@@ -212,40 +212,6 @@ def add_print_page(ctx, mmap, href, well_bounds_pt, points_FG, hm2pt_ratio, layo
         map_width_pt, map_height_pt = well_width_pt, well_height_pt
 
     place_image(ctx, img, 0, 0, map_width_pt, map_height_pt)
-
-    #
-    # Draw a dot if need be
-    #
-    if fuzzy is not None:
-        loc = Location(fuzzy[1], fuzzy[0])
-        pt = mmap.locationPoint(loc)
-
-        x = map_width_pt * float(pt.x) / mmap.dimensions.x
-        y = map_height_pt * float(pt.y) / mmap.dimensions.y
-
-        draw_circle(ctx, x, y, 20)
-        ctx.set_source_rgb(0, 0, 0)
-        ctx.set_line_width(2)
-        ctx.set_dash([2, 6])
-        ctx.stroke()
-
-    #
-    # X marks the spot, if needed
-    #
-    if mark is not None:
-        loc = Location(mark[1], mark[0])
-        pt = mmap.locationPoint(loc)
-
-        x = map_width_pt * float(pt.x) / mmap.dimensions.x
-        y = map_height_pt * float(pt.y) / mmap.dimensions.y
-
-        draw_cross(ctx, x, y, 8, 6)
-        ctx.set_source_rgb(1, 1, 1)
-        ctx.fill()
-
-        draw_cross(ctx, x, y, 8, 4)
-        ctx.set_source_rgb(0, 0, 0)
-        ctx.fill()
 
     #
     # Perhaps some boxes?
