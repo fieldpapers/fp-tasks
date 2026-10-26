@@ -4,15 +4,12 @@ import os
 import sys
 
 from optparse import OptionParser
-from os import close, unlink
-from tempfile import mkstemp
 
 from ModestMaps import mapByExtentZoom
 from ModestMaps.Geo import Location
 from ModestMaps.Providers import TemplatedMercatorProvider
 
-from cairoutils import get_drawing_context
-from compose import add_print_page, paper_info
+from compose import paper_info, print_pdf
 from dimensions import ptpin
 
 
@@ -44,21 +41,7 @@ def render_page(paper_size, orientation, layout, atlas_id, page_number, bounds, 
 
     page_mmap = mapByExtentZoom(TemplatedMercatorProvider(provider), Location(north, west), Location(south, east), zoom)
 
-    (handle, print_filename) = mkstemp(suffix='.pdf')
-    close(handle)
-
-    try:
-        (print_context, finish_drawing) = get_drawing_context(print_filename, page_width_pt, page_height_pt)
-
-        add_print_page(print_context, page_mmap, page_href, map_bounds_pt, points_FG, hm2pt_ratio, layout, text, [], title)
-
-        finish_drawing()
-
-        # write to STDOUT
-        sys.stdout.buffer.write(open(print_filename, 'rb').read())
-
-    finally:
-        unlink(print_filename)
+    return print_pdf(page_width_pt, page_height_pt, page_mmap, page_href, map_bounds_pt, points_FG, hm2pt_ratio, layout, text, [], title)
 
 
 if __name__ == '__main__':
@@ -104,4 +87,4 @@ if __name__ == '__main__':
         parser.print_help()
         exit(1)
 
-    render_page(opts.paper_size, opts.orientation, opts.layout, args[0], opts.page_number, opts.bounds, opts.zoom, opts.provider, opts.text, opts.title)
+    sys.stdout.buffer.write(render_page(opts.paper_size, opts.orientation, opts.layout, args[0], opts.page_number, opts.bounds, opts.zoom, opts.provider, opts.text, opts.title))

@@ -1,22 +1,21 @@
 #!/usr/bin/env python3
 
 from math import pi
-from os.path import join as pathjoin, dirname, realpath
-from os import close, unlink
+from os.path import join as pathjoin, dirname
 from io import BytesIO
-from tempfile import mkstemp
 import subprocess
 import sys
 
 from ModestMaps.Geo import Location
 from ModestMaps.Core import Point
 
-from cairo import ImageSurface
+from cairo import Context, ImageSurface, PDFSurface, FONT_SLANT_NORMAL, FONT_WEIGHT_BOLD
 
-from svgutils import create_cairo_font_face_for_file, place_image, draw_box, draw_circle, flow_text
+from svgutils import place_image, draw_box, draw_circle, flow_text
 from dimensions import point_A, point_B, point_C, point_D, point_E, ptpin
 
-cached_fonts = dict()
+# found by fontconfig (Debian's fonts-liberation2)
+FONT = 'Liberation Sans'
 
 def get_qrcode_image(print_href):
     """ Render a QR code to an ImageSurface.
@@ -28,18 +27,11 @@ def get_qrcode_image(print_href):
 def get_mmap_image(mmap):
     """ Render a Map to an ImageSurface.
     """
-    handle, filename = mkstemp(prefix='map_image-', suffix='.png')
+    png = BytesIO()
+    mmap.draw(fatbits_ok=False).save(png, 'PNG')
+    png.seek(0)
 
-    try:
-        close(handle)
-        mmap.draw(fatbits_ok=False).save(filename)
-
-        img = ImageSurface.create_from_png(filename)
-
-    finally:
-        unlink(filename)
-
-    return img
+    return ImageSurface.create_from_png(png)
 
 def paper_info(paper_size, orientation):
     """ Return page width, height, differentiating points and aspect ration.
@@ -61,24 +53,11 @@ def add_page_text(ctx, text, x, y, width, height):
     ctx.translate(x, y)
     ctx.move_to(0, 12)
 
-    try:
-        font_file = realpath('fonts/LiberationSans-Regular.ttf')
+    ctx.set_source_rgb(0, 0, 0)
+    ctx.select_font_face(FONT)
+    ctx.set_font_size(10)
 
-        if font_file not in cached_fonts:
-            cached_fonts[font_file] = create_cairo_font_face_for_file(font_file)
-
-        font = cached_fonts[font_file]
-
-    except:
-        # hm.
-        pass
-
-    else:
-        ctx.set_source_rgb(0, 0, 0)
-        ctx.set_font_face(font)
-        ctx.set_font_size(10)
-
-        flow_text(ctx, width, 12, text)
+    flow_text(ctx, width, 12, text)
 
     ctx.restore()
 
@@ -180,6 +159,16 @@ def add_scale_bar(ctx, mmap, map_height_pt):
     ctx.show_text(units.upper())
 
     ctx.restore()
+
+def print_pdf(page_width_pt, page_height_pt, *args):
+    """ Render a page with add_print_page(); returns the PDF as bytes.
+    """
+    pdf = BytesIO()
+    surface = PDFSurface(pdf, page_width_pt, page_height_pt)
+    add_print_page(Context(surface), *args)
+    surface.finish()
+
+    return pdf.getvalue()
 
 def add_print_page(ctx, mmap, href, well_bounds_pt, points_FG, hm2pt_ratio, layout, text, indexees, title):
     """
@@ -299,46 +288,35 @@ def add_print_page(ctx, mmap, href, well_bounds_pt, points_FG, hm2pt_ratio, layo
     img = ImageSurface.create_from_png(icon)
     place_image(ctx, img, 0, -36, 129.1, 36)
 
-    try:
-        font_file = realpath(pathjoin(dirname(__file__), 'fonts/LiberationSans-Regular.ttf'))
+    ctx.select_font_face(FONT)
+    ctx.set_font_size(12)
 
-        if font_file not in cached_fonts:
-            cached_fonts[font_file] = create_cairo_font_face_for_file(font_file)
+    line = href.split('?')[0]
+    text_width = ctx.text_extents(line).width
 
-        font = cached_fonts[font_file]
-    except:
-        # no text for us.
-        pass
-    else:
-        ctx.set_font_face(font)
-        ctx.set_font_size(12)
+    ctx.move_to(well_width_pt - text_width, -6)
+    ctx.show_text(line)
 
-        line = href.split('?')[0]
-        text_width = ctx.text_extents(line).width
+    title_width = ctx.text_extents(title).width
 
-        ctx.move_to(well_width_pt - text_width, -6)
-        ctx.show_text(line)
+    ctx.move_to(well_width_pt - title_width, -24)
+    ctx.show_text(title)
 
-        title_width = ctx.text_extents(title).width
+    add_scale_bar(ctx, mmap, map_height_pt)
 
-        ctx.move_to(well_width_pt - title_width, -24)
-        ctx.show_text(title)
+    ctx.select_font_face(FONT, FONT_SLANT_NORMAL, FONT_WEIGHT_BOLD)
+    ctx.set_font_size(18)
 
-        add_scale_bar(ctx, mmap, map_height_pt)
+    for (x1, y1, x2, y2, number) in page_numbers:
+        num_ext = ctx.text_extents(number)
+        offset_x, offset_y = (x1 + x2 - num_ext.width) / 2, (y1 + y2 + num_ext.height) / 2
 
-        ctx.set_font_face(font)
-        ctx.set_font_size(18)
+        draw_box(ctx, offset_x - 4, offset_y - num_ext.height - 4, num_ext.width + 8, num_ext.height + 8)
+        ctx.set_source_rgb(1, 1, 1)
+        ctx.fill()
 
-        for (x1, y1, x2, y2, number) in page_numbers:
-            num_ext = ctx.text_extents(number)
-            offset_x, offset_y = (x1 + x2 - num_ext.width) / 2, (y1 + y2 + num_ext.height) / 2
-
-            draw_box(ctx, offset_x - 4, offset_y - num_ext.height - 4, num_ext.width + 8, num_ext.height + 8)
-            ctx.set_source_rgb(1, 1, 1)
-            ctx.fill()
-
-            ctx.set_source_rgb(0, 0, 0)
-            ctx.move_to(offset_x, offset_y)
-            ctx.show_text(number)
+        ctx.set_source_rgb(0, 0, 0)
+        ctx.move_to(offset_x, offset_y)
+        ctx.show_text(number)
 
     ctx.show_page()

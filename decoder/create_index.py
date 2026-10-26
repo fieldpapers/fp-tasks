@@ -4,15 +4,12 @@ import os
 import sys
 
 from optparse import OptionParser
-from os import close, unlink
-from tempfile import mkstemp
 
 from ModestMaps import mapByExtentZoom
 from ModestMaps.Geo import Location
 from ModestMaps.Providers import TemplatedMercatorProvider
 
-from cairoutils import get_drawing_context
-from compose import add_print_page, paper_info
+from compose import paper_info, print_pdf
 from dimensions import ptpin
 
 
@@ -62,20 +59,7 @@ def render_index(paper_size, orientation, layout, atlas_id, bounds, envelope, zo
                 number="%s%d" % (chr(ord('A') + y), x + 1),
             ))
 
-    (handle, print_filename) = mkstemp(suffix='.pdf')
-    close(handle)
-
-    try:
-        (print_context, finish_drawing) = get_drawing_context(print_filename, page_width_pt, page_height_pt)
-
-        add_print_page(print_context, page_mmap, page_href, map_bounds_pt, points_FG, hm2pt_ratio, layout, text, pages, title)
-
-        finish_drawing()
-
-        return open(print_filename, 'rb').read()
-
-    finally:
-        unlink(print_filename)
+    return print_pdf(page_width_pt, page_height_pt, page_mmap, page_href, map_bounds_pt, points_FG, hm2pt_ratio, layout, text, pages, title)
 
 
 if __name__ == '__main__':

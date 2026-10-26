@@ -8,8 +8,9 @@ ENV AWS_REGION=us-east-1
 #   (and gdal/pycairo, which pip builds from source)
 # - gdal/cairo/zbar: the Python geo + QR stack (gdal pin in requirements.txt must
 #   match this image's libgdal; bullseye ships 3.2.2)
-# - ghostscript/imagemagick/qrencode/php-cli: CLI tools the decoder scripts shell
-#   out to; php runs decoder/lossy/page.php, the FPDF-based PDF writer (still live)
+# - ghostscript/imagemagick/qrencode: CLI tools the service and decoder scripts
+#   shell out to
+# - fonts-liberation2: Liberation Sans, the font on rendered pages (via fontconfig)
 #
 # bullseye is past end of life and its packages are only on archive.debian.org.
 RUN sed -i 's|deb.debian.org|archive.debian.org|g' /etc/apt/sources.list && \
@@ -18,7 +19,7 @@ RUN sed -i 's|deb.debian.org|archive.debian.org|g' /etc/apt/sources.list && \
       ca-certificates build-essential pkg-config \
       python3 python3-pip libpython3-dev \
       gdal-bin libgdal-dev libcairo2-dev \
-      ghostscript imagemagick qrencode zbar-tools php-cli && \
+      ghostscript imagemagick qrencode zbar-tools fonts-liberation2 && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
