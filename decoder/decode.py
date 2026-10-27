@@ -191,7 +191,7 @@ def _blob_matches_secondary(blobs, aed_match):
         (feature_g_portrait_a3, point_G_portrait_a3, feature_f_portrait_a3, point_F_portrait_a3),
     )
 
-    for feature_g, point_G, feature_f, point_F in features_fg:
+    for feature_g, _point_G, feature_f, point_F in features_fg:
         g_theta, g_ratio = feature_g.theta, feature_g.ratio
         g_bounds = theta_ratio_bounds(g_theta, theta_tol, g_ratio, ratio_tol)
         g_matches = blobs2feats_fitted(aed_match.s1, aed_match.s2, blobs, *g_bounds)

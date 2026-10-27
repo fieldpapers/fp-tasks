@@ -16,9 +16,9 @@ import sys
 import tempfile
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
-from typing import Annotated, List, Literal, Tuple
+from typing import Annotated, Literal
 from urllib.parse import unquote, urlparse
 
 from fastapi import FastAPI
@@ -34,7 +34,7 @@ app = FastAPI()
 Name = Annotated[str, Field(pattern=r'^[A-Za-z0-9]+$')]
 
 # west, south, east, north
-BBox = Tuple[float, float, float, float]
+BBox = tuple[float, float, float, float]
 
 
 class Page(BaseModel):
@@ -58,7 +58,7 @@ class Index(Page):
 
 class Merge(BaseModel):
     slug: Name
-    pdf_urls: List[str]
+    pdf_urls: list[str]
 
 
 class Upload(BaseModel):
@@ -234,7 +234,7 @@ def persist(key, body, content_type):
     return f'https://{host}/{bucket}/{key}'
 
 
-@lru_cache(maxsize=None)
+@cache
 def s3():
     import boto3
 

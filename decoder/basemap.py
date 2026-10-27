@@ -59,7 +59,7 @@ class Map:
         pool = ThreadPoolExecutor(4)
         try:
             fetched = pool.map(lambda t: fetch(t[0], t[1] % n, t[2], self.zoom), tiles)
-            for (_, x, y), tile in zip(tiles, fetched):
+            for (_, x, y), tile in zip(tiles, fetched, strict=True):
                 if tile:
                     img.paste(tile, (round(x * TILE_SIZE - self.left), round(y * TILE_SIZE - self.top)), tile)
         finally:

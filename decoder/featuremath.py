@@ -227,7 +227,7 @@ def blobs2feats_limited(blobs1, blobs2, blobs3, min_theta=-pi, max_theta=pi, min
 
     matches.sort(reverse=True)
 
-    for sort, ratio, theta, blob1, blob2, blob3 in matches:
+    for _, ratio, theta, blob1, blob2, blob3 in matches:
         i = blobs1.index(blob1)
         j = blobs2.index(blob2)
         k = blobs3.index(blob3)
@@ -272,14 +272,14 @@ def blobs2features(blobs, min_hypot=0, min_theta=-pi, max_theta=pi, min_ratio=0,
     # blobs_sorted = [(distances[i,j], i, j) for (i, j) in zip(*hypot_nonzero)]
 
     # Prepend combined pixel size, largest-to-smallest
-    blobs_sorted = [(blobs[i].size + blobs[j].size, i, j) for (i, j) in zip(*hypot_nonzero)]
+    blobs_sorted = [(blobs[i].size + blobs[j].size, i, j) for (i, j) in zip(*hypot_nonzero, strict=True)]
 
     blobs_sorted.sort(reverse=True)
 
     #
     # check each hypotenuse for an eligible third point
     #
-    for row, (sort_value, i, j) in enumerate(blobs_sorted):
+    for _, i, j in blobs_sorted:
         #
         # vector theta for hypotenuse (i, j)
         #
@@ -299,7 +299,7 @@ def blobs2features(blobs, min_hypot=0, min_theta=-pi, max_theta=pi, min_ratio=0,
         #
         # check each blob[k] for correct distance ratio
         #
-        for size, k, theta in ik_thetas:
+        for _, k, theta in ik_thetas:
             ratio = distances[i, k] / distances[i, j]
 
             if theta < min_theta or max_theta < theta:
