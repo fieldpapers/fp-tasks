@@ -9,29 +9,24 @@ import sys
 from io import BytesIO
 from urllib.parse import unquote
 
-import zbar
+import zxingcpp
 from PIL import Image
+
+# Small, blurry photos (e.g. from a phone at arm's length) sometimes only
+# decode when scaled up; large, noisy ones when scaled down.
+SCALES = (1, 2, 0.5)
 
 
 def read_qr(image):
     """
-    Return the URL in a grayscale image's QR code, or None.
+    Return the URL in an image's QR code, or None.
     """
-    # some large, noisy photos only decode when scaled down
-    return scan(image) or scan(image.resize((image.width // 2, image.height // 2), Image.LANCZOS))
-
-
-def scan(image):
-    scanner = zbar.ImageScanner()
-    scanner.parse_config('disable')
-    scanner.parse_config('qrcode.enable')
-
-    zimg = zbar.Image(image.width, image.height, 'Y800', image.tobytes())
-    scanner.scan(zimg)
-    for symbol in zimg:
-        href = unquote(symbol.data)
-        if href.startswith('http'):
-            return href
+    for scale in SCALES:
+        size = (round(image.width * scale), round(image.height * scale))
+        for result in zxingcpp.read_barcodes(image.resize(size, Image.LANCZOS), formats=zxingcpp.BarcodeFormat.QRCode):
+            href = unquote(result.text)
+            if href.startswith('http'):
+                return href
 
     return None
 
@@ -40,6 +35,6 @@ if __name__ == '__main__':
     href = read_qr(Image.open(BytesIO(sys.stdin.buffer.read())).convert('L'))
     if href is None:
         print('no QR code found', file=sys.stderr)
-        exit(os.EX_DATAERR)
+        sys.exit(os.EX_DATAERR)
 
     print(href)
