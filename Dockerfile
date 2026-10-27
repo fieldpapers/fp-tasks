@@ -27,8 +27,8 @@ RUN useradd --home-dir /app app && chown -R app:app /app
 USER app
 
 
-# Regression tests; see `make test`. Runs as root so tests can write to the
-# bind-mounted working copy.
+# Test runner; see `make test`. Runs as root so that tests can write to a
+# bind-mounted output directory.
 FROM base AS test
 
 USER root

@@ -17,4 +17,5 @@ select = ["E", "F", "W", "I", "UP", "B"]
 "decoder/*" = ["UP031"]
 
 [tool.pytest.ini_options]
-pythonpath = [".", "decoder"]
+pythonpath = ["."]
+testpaths = ["tests"]

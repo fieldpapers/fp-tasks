@@ -1,102 +1,243 @@
-"""
-HTTP smoke tests.
-
-Results are stored locally (PERSIST=local) in a directory served over HTTP,
-so that merge_pages can fetch the rendered pages.
-"""
-
-import functools
 import json
-import threading
-from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+import re
+import subprocess
+import tempfile
+from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 import pytest
-from fastapi.testclient import TestClient
-from helpers import TESTS, fetch, geotiff_corners, rasterize
+from osgeo import gdal
 from PIL import Image
-from test_render import CASES
 
-from service.app import app, provider_template
+from service.app import provider_template
 
-SAMPLE = json.loads((TESTS / 'snapshots.json').read_text())[0]
+gdal.UseExceptions()
 
+TESTS = Path(__file__).parent
+ACTUAL = TESTS / 'actual'
 
-class StaticHandler(SimpleHTTPRequestHandler):
-    def log_message(self, *args):
-        pass
+# Max RMS difference (0-255) from the expected images
+RENDER_TOLERANCE = 4
+GEOREFERENCE_TOLERANCE = 8
+
+# bboxes and zooms from real atlases, so that their shapes match what fp-web
+# generates
+PAGES = {
+    'letter-portrait': dict(
+        paper_size='letter',
+        orientation='portrait',
+        layout='full-page',
+        zoom=18,
+        bbox=[-83.68451356887817, 9.979343323877206, -83.67997527122498, 9.985112588268525],
+        title='Letter portrait',
+    ),
+    'letter-portrait-half': dict(
+        paper_size='letter',
+        orientation='portrait',
+        layout='half-page',
+        zoom=18,
+        bbox=[-83.68451356887817, 9.982227956072866, -83.67997527122498, 9.985112588268525],
+        title='Letter portrait half-page',
+        text='Notes for the field team (bring pencils).\nCheck the footpath along the river.',
+    ),
+    'a4-landscape': dict(
+        paper_size='a4',
+        orientation='landscape',
+        layout='full-page',
+        zoom=17,
+        bbox=[-83.66563081741333, 9.360616726827006, -83.65232706069946, 9.369889915391266],
+        title='Café São Paulo (A4 landscape)',
+    ),
+    'a3-portrait': dict(
+        paper_size='a3',
+        orientation='portrait',
+        layout='full-page',
+        zoom=17,
+        bbox=[12.464075088500977, 42.4953570487247, 12.478022575378418, 42.50988112107605],
+        title='A3 portrait',
+    ),
+}
+
+INDEX = dict(
+    paper_size='letter',
+    orientation='landscape',
+    layout='full-page',
+    zoom=16,
+    bbox=[-83.6682915687561, 9.35505281368845, -83.63636255264282, 9.375453828529821],
+    atlas_bbox=[-83.66563081741333, 9.360616726827006, -83.6390233039856, 9.369889915391266],
+    cols=2,
+    rows=1,
+    title='Letter landscape index',
+)
+
+SNAPSHOTS = json.loads((TESTS / 'snapshots.json').read_text())
 
 
 @pytest.fixture(scope='module')
-def static(tmp_path_factory):
-    """
-    (directory, URL prefix) where the service stores its results.
-    """
-    root = tmp_path_factory.mktemp('static')
-    server = ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(StaticHandler, directory=str(root)))
-    threading.Thread(target=server.serve_forever, daemon=True).start()
-    yield root, f'http://127.0.0.1:{server.server_port}/'
-    server.shutdown()
+def provider(server):
+    return server + 'tiles/{z}/{x}/{y}.png'
 
 
 @pytest.fixture(scope='module')
-def client(static):
-    root, prefix = static
-    with pytest.MonkeyPatch.context() as mp:
-        mp.setenv('PERSIST', 'local')
-        mp.setenv('STATIC_PATH', str(root))
-        mp.setenv('STATIC_URI_PREFIX', prefix)
-        yield TestClient(app)
-
-
-@pytest.fixture(scope='module')
-def provider(tile_provider):
+def render(client, provider):
     """
-    The fixture tile server's URL template in fp-web's (Leaflet) form.
+    Function that renders a page (once per module); returns the PDF's URL.
     """
-    return tile_provider.replace('{Z}', '{z}').replace('{X}', '{x}').replace('{Y}', '{y}')
+    urls = {}
+
+    def render(name):
+        if name not in urls:
+            if name == 'index':
+                rsp = client.post('/render_index', json=dict(INDEX, slug='index', page_number='i', provider=provider))
+            else:
+                rsp = client.post('/render_page', json=page_payload(name, provider))
+            assert rsp.status_code == 200, rsp.text
+            urls[name] = rsp.json()['pdf_url']
+        return urls[name]
+
+    return render
 
 
 def page_payload(name, provider):
-    case = CASES[name]
-    n, w, s, e = case['bounds']
-    return dict(
-        slug=case['slug'],
-        page_number=case['page'],
-        bbox=[w, s, e, n],
-        zoom=case['zoom'],
-        provider=provider,
-        paper_size=case['paper'],
-        orientation=case['orientation'],
-        layout=case['layout'],
-        text=case.get('text', ''),
-        title=case['title'],
+    return dict(PAGES[name], slug=slug(name), page_number='A1', provider=provider)
+
+
+def slug(name):
+    return re.sub(r'[^A-Za-z0-9]', '', name)
+
+
+def local(url):
+    """
+    Path in tests/ of a URL on the test server.
+    """
+    return TESTS / urlparse(url).path.lstrip('/')
+
+
+def rasterize(pdf, dpi):
+    """
+    Rasterize each page of a PDF with Ghostscript.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        # supersampled, since Ghostscript point-samples downscaled images
+        args = [f'-r{dpi * 2}', '-dDownScaleFactor=2', f'-sOutputFile={tmp}/%d.png', str(pdf)]
+        subprocess.run(['gs', '-q', '-sDEVICE=png16m', *args], check=True)
+        pages = sorted(Path(tmp).glob('*.png'), key=lambda p: int(p.stem))
+        return [Image.open(p).convert('RGB') for p in pages]
+
+
+def warp(tif, bbox, width=800):
+    """
+    The part of a GeoTIFF within a bbox, in web mercator.
+    """
+    ds = gdal.Warp(
+        '',
+        str(tif),
+        format='MEM',
+        dstSRS='EPSG:3857',
+        outputBounds=bbox,
+        outputBoundsSRS='EPSG:4326',
+        width=width,
+        height=0,
     )
+    return Image.fromarray(ds.ReadAsArray().transpose(1, 2, 0))
 
 
-@pytest.fixture(scope='module')
-def image_url(static):
+def href(slug, page_number, bbox):
+    return f'https://fieldpapers.org/atlases/{slug}/{page_number}?bbox=' + ','.join(f'{v:f}' for v in bbox)
+
+
+@pytest.mark.parametrize('name', PAGES)
+def test_render_page(name, render, compare):
+    url = render(name)
+    assert url.endswith(f'actual/atlases/{slug(name)}/{slug(name)}-A1.pdf')
+
+    [page] = rasterize(local(url), 72)
+    compare(name, page, RENDER_TOLERANCE)
+
+
+def test_render_index(render, compare):
+    url = render('index')
+    assert url.endswith('actual/atlases/index/index-index.pdf')
+
+    [page] = rasterize(local(url), 72)
+    compare('index', page, RENDER_TOLERANCE)
+
+
+def test_merge_pages(client, render):
+    rsp = client.post('/merge_pages', json=dict(slug='index', pdf_urls=[render('index'), render('letter-portrait')]))
+    assert rsp.status_code == 200, rsp.text
+    url = rsp.json()['pdf_url']
+    assert url.endswith('actual/atlases/index/atlas-index.pdf')
+
+    pages = rasterize(local(url), 10)
+    assert [p.width > p.height for p in pages] == [True, False]
+
+
+@pytest.mark.parametrize('name', PAGES)
+def test_round_trip(name, client, server, render, compare):
     """
-    URL of the sample snapshot's image. It's served locally from the test
-    cache so that the service doesn't need AWS credentials to fetch it.
+    Georeference a clean rasterization of a rendered page.
     """
-    root, prefix = static
-    (root / 'sample.jpg').write_bytes(fetch(SAMPLE['image_url']).read_bytes())
-    return prefix + 'sample.jpg'
+    page = PAGES[name]
+    [scan] = rasterize(local(render(name)), 200)
+    scan.save(ACTUAL / f'{name}-scan.png')
+    image_url = f'{server}actual/{name}-scan.png'
+
+    rsp = client.post('/decode_qr', json=dict(image_url=image_url))
+    assert rsp.status_code == 200, rsp.text
+    assert rsp.json() == {'href': href(slug(name), 'A1', page['bbox'])}
+
+    rsp = client.post('/georeference', json=dict(page, slug=slug(name), image_url=image_url))
+    assert rsp.status_code == 200, rsp.text
+    compare(f'{name}-georeferenced', warp(local(rsp.json()['geotiff_url']), page['bbox']), GEOREFERENCE_TOLERANCE)
 
 
-def sample_payload(image_url, **overrides):
-    n, w, s, e = SAMPLE['bounds']
-    return {
-        **dict(
-            slug=SAMPLE['slug'],
-            image_url=image_url,
-            bbox=[w, s, e, n],
-            paper_size=SAMPLE['paper'],
-            orientation=SAMPLE['orientation'],
-            layout=SAMPLE['layout'],
-        ),
-        **overrides,
-    }
+@pytest.mark.parametrize('snapshot', SNAPSHOTS, ids=[s['file'] for s in SNAPSHOTS])
+def test_snapshot(snapshot, client, server, compare):
+    """
+    Georeference a photo or scan of a printed page.
+    """
+    name = Path(snapshot['file']).stem
+    image_url = f'{server}snapshots/{snapshot["file"]}'
+
+    rsp = client.post('/decode_qr', json=dict(image_url=image_url))
+    assert rsp.status_code == 200, rsp.text
+    assert rsp.json() == {'href': snapshot['href']}
+
+    bbox = [float(v) for v in parse_qs(urlparse(snapshot['href']).query)['bbox'][0].split(',')]
+    payload = dict(
+        slug=slug(name),
+        image_url=image_url,
+        bbox=bbox,
+        paper_size=snapshot['paper_size'],
+        orientation=snapshot['orientation'],
+        layout=snapshot['layout'],
+    )
+    rsp = client.post('/georeference', json=payload)
+    assert rsp.status_code == 200, rsp.text
+    compare(f'snapshot-{name}', warp(local(rsp.json()['geotiff_url']), bbox), GEOREFERENCE_TOLERANCE)
+
+
+def test_invalid_payload(client, provider):
+    rsp = client.post('/render_page', json=dict(page_payload('letter-portrait', provider), slug='../x'))
+    assert rsp.status_code == 422
+
+
+def test_unreachable_tiles(client):
+    rsp = client.post('/render_page', json=page_payload('letter-portrait', 'http://127.0.0.1:9/{z}/{x}/{y}.png'))
+    assert rsp.status_code == 500
+
+
+def test_no_qr_code(client, provider):
+    rsp = client.post('/decode_qr', json=dict(image_url=provider.format(z=1, x=0, y=0)))
+    assert rsp.status_code == 422
+
+
+def test_no_registration_marks(client, provider):
+    image_url = provider.format(z=1, x=0, y=0)
+    rsp = client.post('/georeference', json=dict(PAGES['letter-portrait'], slug='blank', image_url=image_url))
+    assert rsp.status_code == 422
+    assert 'could not process source image' in rsp.json()['detail']
 
 
 def test_provider_template():
@@ -108,73 +249,3 @@ def test_provider_template():
         provider_template('https://{S}.example.com/{z}/{x}/{y}.png,https://tile.stamen.com/utm/{Z}/{X}/{Y}.png')
         == 'https://a.example.com/{Z}/{X}/{Y}.png,https://tile.stamen.com/utm/{Z}/{X}/{Y}.png'
     )
-
-
-def test_health(client):
-    assert client.get('/health').status_code == 200
-
-
-def test_render_and_merge(client, static, provider, output_dir):
-    root, prefix = static
-
-    rsp = client.post('/render_page', json=page_payload('letter-portrait', provider))
-    assert rsp.status_code == 200, rsp.text
-    page_url = rsp.json()['pdf_url']
-    assert page_url == prefix + 'atlases/15tlj042/15tlj042-A1.pdf'
-
-    case = CASES['letter-landscape-index']
-    n, w, s, e = case['envelope']
-    rsp = client.post(
-        '/render_index',
-        json=dict(
-            page_payload('letter-landscape-index', provider),
-            atlas_bbox=[w, s, e, n],
-            cols=case['cols'],
-            rows=case['rows'],
-        ),
-    )
-    assert rsp.status_code == 200, rsp.text
-    index_url = rsp.json()['pdf_url']
-    assert index_url == prefix + 'atlases/1cr93fpr/1cr93fpr-index.pdf'
-
-    rsp = client.post('/merge_pages', json=dict(slug='1cr93fpr', pdf_urls=[index_url, page_url]))
-    assert rsp.status_code == 200, rsp.text
-    assert rsp.json()['pdf_url'] == prefix + 'atlases/1cr93fpr/atlas-1cr93fpr.pdf'
-
-    pages = rasterize(root / 'atlases/1cr93fpr/atlas-1cr93fpr.pdf', 20, output_dir / 'service-merged')
-    assert [p.width > p.height for p in pages] == [True, False]
-
-
-def test_invalid_payload(client, provider):
-    rsp = client.post('/render_page', json=dict(page_payload('letter-portrait', provider), slug='../x'))
-    assert rsp.status_code == 422
-
-
-def test_decode_qr(client, image_url):
-    rsp = client.post('/decode_qr', json=dict(image_url=image_url))
-    assert rsp.status_code == 200, rsp.text
-    assert rsp.json() == {'href': SAMPLE['href']}
-
-
-def test_decode_qr_without_code(client, tile_provider):
-    rsp = client.post('/decode_qr', json=dict(image_url=tile_provider.format(Z=1, X=0, Y=0)))
-    assert rsp.status_code == 422
-
-
-def test_georeference(client, static, image_url):
-    root, prefix = static
-
-    rsp = client.post('/georeference', json=sample_payload(image_url))
-    assert rsp.status_code == 200, rsp.text
-    key = f'snapshots/{SAMPLE["slug"]}/field-paper-{SAMPLE["slug"]}.tiff'
-    assert rsp.json() == {'geotiff_url': prefix + key}
-    assert len(geotiff_corners(root / key)) == 4
-
-
-def test_georeference_without_marks(client, static):
-    root, prefix = static
-    Image.new('RGB', (1200, 900), 'white').save(root / 'blank.jpg')
-
-    rsp = client.post('/georeference', json=sample_payload(prefix + 'blank.jpg'))
-    assert rsp.status_code == 422
-    assert 'could not process source image' in rsp.json()['detail']

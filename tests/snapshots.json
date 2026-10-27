@@ -1,0 +1,30 @@
+[
+  {
+    "file": "2s1xu8bt-A1.jpg",
+    "href": "https://fieldpapers.org/atlases/2s1xu8bt/A1?bbox=2.184809,41.383200,2.192920,41.391813",
+    "paper_size": "a4",
+    "orientation": "portrait",
+    "layout": "full-page"
+  },
+  {
+    "file": "3gdo036k-A2.jpg",
+    "href": "https://fieldpapers.org/atlases/3gdo036k/A2?bbox=-122.351472,47.619959,-122.347376,47.623532",
+    "paper_size": "letter",
+    "orientation": "portrait",
+    "layout": "full-page"
+  },
+  {
+    "file": "56hsedjx-B2.jpg",
+    "href": "https://fieldpapers.org/atlases/56hsedjx/B2?bbox=139.700072,35.657401,139.704128,35.659733",
+    "paper_size": "a4",
+    "orientation": "landscape",
+    "layout": "full-page"
+  },
+  {
+    "file": "56hsedjx-i.jpg",
+    "href": "https://fieldpapers.org/atlases/56hsedjx/i?bbox=139.695206,35.656934,139.704939,35.662531",
+    "paper_size": "a4",
+    "orientation": "landscape",
+    "layout": "full-page"
+  }
+]

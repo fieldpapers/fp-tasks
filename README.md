@@ -30,6 +30,21 @@ For local development it is usually run by fp-web's `docker-compose.yml`. See
 
 The service has no authentication and must not be exposed publicly.
 
+## Tests
+
+`tests/` holds end-to-end tests of the HTTP API: rendering atlas pages
+(against generated map tiles), merging them, and georeferencing both
+rasterized pages and photos of printed pages (`tests/snapshots/`, listed in
+`tests/snapshots.json`). They run in the container image's `test` stage:
+
+```bash
+make test                       # or: make test PYTEST_ARGS="-k round_trip -x"
+```
+
+Images produced by the tests are written to `tests/actual/` and compared with
+`tests/expected/`. After an intentional change to the output, run
+`make test PYTEST_ARGS=--update-expected` and review the changed images.
+
 ## Environment variables
 
 * `PORT` - Port to listen on. Defaults to `8080`.

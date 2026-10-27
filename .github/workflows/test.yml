@@ -1,0 +1,26 @@
+name: Test
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build the test image
+        run: docker build --target test -t fp-tasks-test .
+
+      - name: Run tests
+        run: docker run --rm -v "$PWD/tests:/app/tests" fp-tasks-test python3 -m pytest
+
+      - name: Upload actual images
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: actual
+          path: tests/actual/
