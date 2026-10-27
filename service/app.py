@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Annotated, List, Literal, Tuple
 from urllib.parse import unquote, urlparse
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -108,11 +108,7 @@ def merge_pages(merge: Merge):
 
 @app.post('/decode_qr')
 def decode_qr(upload: Upload):
-    href = read_qr(download(upload.image_url))
-    if href is None:
-        raise HTTPException(422, 'no QR code found')
-
-    return {'href': href}
+    return {'href': read_qr(download(upload.image_url))}
 
 
 @app.post('/georeference')
@@ -157,12 +153,9 @@ def provider_template(provider):
 
 def read_qr(image):
     """
-    Return the URL in an image's QR code, or None if there isn't one.
+    Return the URL in an image's QR code.
     """
-    # read_qr_code.sh fails when it finds no code, so check its output instead
-    out = run(['./read_qr_code.sh'], image, timeout=60, check=False)
-    href = unquote(out.decode().strip())
-    return href if href.startswith('http') else None
+    return run([sys.executable, 'read_qr.py'], image, timeout=60).decode().strip()
 
 
 def process_snapshot(image, bbox, paper_size, orientation, layout):
@@ -175,7 +168,7 @@ def process_snapshot(image, bbox, paper_size, orientation, layout):
     return run([sys.executable, 'process_snapshot.py', *args], image, timeout=120)
 
 
-def run(args, input=None, timeout=60, check=True):
+def run(args, input=None, timeout=60):
     """
     Run a command in decoder/, in its own process group so that a timeout
     kills any children it spawned too. Returns its stdout.
@@ -190,7 +183,7 @@ def run(args, input=None, timeout=60, check=True):
         proc.communicate()
         raise
 
-    if check and proc.returncode != 0:
+    if proc.returncode != 0:
         raise subprocess.CalledProcessError(proc.returncode, args, out, err)
 
     return out

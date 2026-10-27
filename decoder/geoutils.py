@@ -5,6 +5,8 @@ from osgeo import gdal
 from matrixmath import Point
 from dimensions import ptpin
 
+gdal.UseExceptions()
+
 def calculate_gcps(p2s, paper_width_pt, paper_height_pt, north, west, south, east):
     """
     """
