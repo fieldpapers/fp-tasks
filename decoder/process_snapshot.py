@@ -37,7 +37,7 @@ def process_snapshot(input, bounds, paper, orientation, layout):
     (north, west, south, east) = page_bounds(bounds, orientation, layout)
     blobs = imgblobs(image)
 
-    for s2p, _paper, _orientation in paper_matches(blobs):
+    for s2p, _paper, _orientation in paper_matches(blobs, image.size):
         print(_paper, _orientation, '--', s2p, file=sys.stderr)
 
         if (paper, orientation) != (_paper, _orientation):

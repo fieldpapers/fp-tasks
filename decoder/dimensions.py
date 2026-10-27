@@ -52,11 +52,15 @@ feature_f_landscape_a4 = Feature(point_E, point_F_landscape_a4, point_G_landscap
 feature_f_landscape_ltr = Feature(point_E, point_F_landscape_ltr, point_G_landscape_ltr)
 
 #
-# feature tolerances and minimum size for featuremath.blobs2features()
+# feature tolerances and minimum size for featuremath.blobs2features(). The
+# tolerances allow for perspective distortion and warped paper in photos.
 #
-ratio_tol = 0.10
-theta_tol = 0.09  # approx 5 degrees
-min_size = 800
+ratio_tol = 0.15
+theta_tol = 0.135  # approx 8 degrees
+
+# minimum size of the primary features, as a fraction of the image's shorter
+# side (the page may not fill the image)
+min_size = 0.25
 
 #
 # Ratios of homogenous print coordinates above to printed point coordinates

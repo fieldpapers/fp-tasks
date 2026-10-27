@@ -4,14 +4,16 @@ from featuremath import MatchedFeature, blobs2feats_fitted, blobs2feats_limited,
 from matrixmath import Transform, quad2quad
 
 
-def paper_matches(blobs):
-    """Generate matches for specific paper sizes.
+def paper_matches(blobs, image_size):
+    """Generate matches for specific paper sizes, in an image of image_size
+    (width, height) pixels.
 
     Yield tuples with transformations from scan pixels to print points,
     paper sizes and orientations. Print points are centered on lower right
     corner of QR code.
     """
     from dimensions import (
+        min_size,
         point_F_landscape_a3,
         point_F_landscape_a4,
         point_F_landscape_ltr,
@@ -26,7 +28,7 @@ def paper_matches(blobs):
         ratio_portrait_ltr,
     )
 
-    for dbc_match, aed_match in _blob_matches_primary(blobs):
+    for dbc_match, aed_match in _blob_matches_primary(blobs, min_size * min(image_size)):
         for f_match, point_F in _blob_matches_secondary(blobs, aed_match):
             #
             # determining paper size and orientation based on identity of point E.
@@ -73,16 +75,17 @@ def paper_matches(blobs):
             yield s2p, paper_size, orientation
 
 
-def _blob_matches_primary(blobs):
-    """Generate known matches for DBC (top) and AED (bottom) triangle pairs."""
-    from dimensions import feature_aed, feature_dab, feature_dbc, feature_eac, min_size, ratio_tol, theta_tol
+def _blob_matches_primary(blobs, min_hypot):
+    """Generate known matches for DBC (top) and AED (bottom) triangle pairs,
+    ignoring features with sides shorter than min_hypot pixels."""
+    from dimensions import feature_aed, feature_dab, feature_dbc, feature_eac, ratio_tol, theta_tol
 
     dbc_theta, dbc_ratio = feature_dbc.theta, feature_dbc.ratio
     dab_theta, dab_ratio = feature_dab.theta, feature_dab.ratio
     aed_theta, aed_ratio = feature_aed.theta, feature_aed.ratio
     eac_theta, eac_ratio = feature_eac.theta, feature_eac.ratio
 
-    dbc_matches = blobs2features(blobs, min_size, *theta_ratio_bounds(dbc_theta, theta_tol, dbc_ratio, ratio_tol))
+    dbc_matches = blobs2features(blobs, min_hypot, *theta_ratio_bounds(dbc_theta, theta_tol, dbc_ratio, ratio_tol))
 
     for dbc_tuple in dbc_matches:
         i0, j0, k0 = dbc_tuple[0:3]
@@ -130,7 +133,7 @@ def _blob_matches_primary(blobs):
 
                 _blobs = [blobs[n] for n in set((i0, j0, k0) + (i1, j1, k1) + (i2, j2, k2))]
                 eac_matches = blobs2features(
-                    _blobs, min_size, *theta_ratio_bounds(eac_theta, theta_tol, eac_ratio, ratio_tol)
+                    _blobs, min_hypot, *theta_ratio_bounds(eac_theta, theta_tol, eac_ratio, ratio_tol)
                 )
 
                 for eac_tuple in eac_matches:
