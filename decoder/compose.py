@@ -6,15 +6,12 @@ from io import BytesIO
 import subprocess
 import sys
 
-from ModestMaps.Geo import Location
-from ModestMaps.Core import Point
-
 from cairo import Context, ImageSurface, PDFSurface, FONT_SLANT_NORMAL, FONT_WEIGHT_BOLD
 
 from svgutils import place_image, draw_box, draw_circle, flow_text
 from dimensions import point_A, point_B, point_C, point_D, point_E, ptpin
 
-# found by fontconfig (Debian's fonts-liberation2)
+# found by fontconfig (Debian's fonts-liberation)
 FONT = 'Liberation Sans'
 
 def get_qrcode_image(print_href):
@@ -28,7 +25,7 @@ def get_mmap_image(mmap):
     """ Render a Map to an ImageSurface.
     """
     png = BytesIO()
-    mmap.draw(fatbits_ok=False).save(png, 'PNG')
+    mmap.draw().save(png, 'PNG')
     png.seek(0)
 
     return ImageSurface.create_from_png(png)
@@ -64,10 +61,7 @@ def add_page_text(ctx, text, x, y, width, height):
 def get_map_scale(mmap, map_height_pt):
     """
     """
-    north = mmap.pointLocation(Point(0, 0)).lat
-    south = mmap.pointLocation(mmap.dimensions).lat
-
-    vertical_degrees = north - south
+    vertical_degrees = mmap.north - mmap.south
     vertical_meters = 6378137 * pi * 2 * vertical_degrees / 360
     pts_per_meter = map_height_pt / vertical_meters
 
@@ -210,13 +204,10 @@ def add_print_page(ctx, mmap, href, well_bounds_pt, points_FG, hm2pt_ratio, layo
     for page in indexees:
         north, west, south, east = page['bounds']
 
-        ul = mmap.locationPoint(Location(north, west))
-        lr = mmap.locationPoint(Location(south, east))
+        (x1, y1), (x2, y2) = mmap.point(north, west), mmap.point(south, east)
 
-        x1 = map_width_pt * float(ul.x) / mmap.dimensions.x
-        x2 = map_width_pt * float(lr.x) / mmap.dimensions.x
-        y1 = map_height_pt * float(ul.y) / mmap.dimensions.y
-        y2 = map_height_pt * float(lr.y) / mmap.dimensions.y
+        x1, x2 = map_width_pt * x1 / mmap.width, map_width_pt * x2 / mmap.width
+        y1, y2 = map_height_pt * y1 / mmap.height, map_height_pt * y2 / mmap.height
 
         draw_box(ctx, x1, y1, x2-x1, y2-y1)
         ctx.set_source_rgb(0, 0, 0)

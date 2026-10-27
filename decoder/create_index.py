@@ -5,10 +5,7 @@ import sys
 
 from optparse import OptionParser
 
-from ModestMaps import mapByExtentZoom
-from ModestMaps.Geo import Location
-from ModestMaps.Providers import TemplatedMercatorProvider
-
+from basemap import Map
 from compose import paper_info, print_pdf
 from dimensions import ptpin
 
@@ -41,7 +38,7 @@ def render_index(paper_size, orientation, layout, atlas_id, bounds, envelope, zo
 
     print("page_href: %s" % (page_href), file=sys.stderr)
 
-    page_mmap = mapByExtentZoom(TemplatedMercatorProvider(provider), Location(north, west), Location(south, east), zoom)
+    page_mmap = Map(provider, north, west, south, east, zoom)
 
     pages = []
 

@@ -144,7 +144,7 @@ def page_args(page):
 def provider_template(provider):
     """
     Convert fp-web's provider (a Leaflet-style tile URL template, optionally
-    followed by a comma and an overlay template) to the ModestMaps form.
+    followed by a comma and an overlay template) to the form basemap.Map takes.
     """
     provider = re.sub(r'\{s\}', 'a', provider, count=1, flags=re.IGNORECASE)
     provider = re.sub(r'\{\w\}', lambda m: m.group(0).upper(), provider)
