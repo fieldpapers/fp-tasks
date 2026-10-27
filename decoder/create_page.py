@@ -2,13 +2,11 @@
 
 import os
 import sys
-
 from optparse import OptionParser
 
 from basemap import Map
 from compose import paper_info, print_pdf
 from dimensions import ptpin
-
 
 API_BASE = os.getenv('API_BASE_URL', 'https://fieldpapers.org/')
 
@@ -17,28 +15,40 @@ def render_page(paper_size, orientation, layout, atlas_id, page_number, bounds, 
     # hm2pt_ratio = homogeneous point coordinate conversation ratio
     (page_width_pt, page_height_pt, points_FG, hm2pt_ratio) = paper_info(paper_size, orientation)
 
-    print("Paper: %s/%s" % (paper_size, orientation), file=sys.stderr)
-    print("Width (pt): %f" % (page_width_pt), file=sys.stderr)
-    print("Height (pt): %f" % (page_height_pt), file=sys.stderr)
-    print("hm2pt ratio: %f" % (hm2pt_ratio), file=sys.stderr)
+    print('Paper: %s/%s' % (paper_size, orientation), file=sys.stderr)
+    print('Width (pt): %f' % (page_width_pt), file=sys.stderr)
+    print('Height (pt): %f' % (page_height_pt), file=sys.stderr)
+    print('hm2pt ratio: %f' % (hm2pt_ratio), file=sys.stderr)
 
     # margins
 
-    map_xmin_pt = .5 * ptpin                  # left: 1/2 inch
-    map_ymin_pt = 1 * ptpin                   # top: 1 inch
-    map_xmax_pt = page_width_pt - .5 * ptpin  # right: 1/2 inch
-    map_ymax_pt = page_height_pt - .5 * ptpin # bottom: 1/2 inch
+    map_xmin_pt = 0.5 * ptpin  # left: 1/2 inch
+    map_ymin_pt = 1 * ptpin  # top: 1 inch
+    map_xmax_pt = page_width_pt - 0.5 * ptpin  # right: 1/2 inch
+    map_ymax_pt = page_height_pt - 0.5 * ptpin  # bottom: 1/2 inch
 
     map_bounds_pt = (map_xmin_pt, map_ymin_pt, map_xmax_pt, map_ymax_pt)
     (north, west, south, east) = bounds
 
-    page_href = "%satlases/%s/%s?bbox=%f,%f,%f,%f" % (API_BASE, atlas_id, page_number, west, south, east, north)
+    page_href = '%satlases/%s/%s?bbox=%f,%f,%f,%f' % (API_BASE, atlas_id, page_number, west, south, east, north)
 
-    print("page_href: %s" % (page_href), file=sys.stderr)
+    print('page_href: %s' % (page_href), file=sys.stderr)
 
     page_mmap = Map(provider, north, west, south, east, zoom)
 
-    return print_pdf(page_width_pt, page_height_pt, page_mmap, page_href, map_bounds_pt, points_FG, hm2pt_ratio, layout, text, [], title)
+    return print_pdf(
+        page_width_pt,
+        page_height_pt,
+        page_mmap,
+        page_href,
+        map_bounds_pt,
+        points_FG,
+        hm2pt_ratio,
+        layout,
+        text,
+        [],
+        title,
+    )
 
 
 if __name__ == '__main__':
@@ -55,33 +65,44 @@ if __name__ == '__main__':
     orientations = 'landscape portrait'.split()
     layouts = 'full-page half-page'.split()
 
-    parser.add_option('-s', '--paper-size', dest='paper_size',
-                      help='Choice of papers: %s.' % ', '.join(papers),
-                      choices=papers)
-    parser.add_option('-o', '--orientation', dest='orientation',
-                      help='Choice of orientations: %s.' % ', '.join(orientations),
-                      choices=orientations)
-    parser.add_option('-l', '--layout', dest='layout',
-                      help='Choice of layouts: %s.' % ', '.join(layouts),
-                      choices=layouts)
-    parser.add_option('-b', '--bounds', dest='bounds',
-                      help='Choice of bounds: north, west, south, east.',
-                      type='float', nargs=4)
-    parser.add_option('-z', '--zoom', dest='zoom',
-                      help='Map zoom level.',
-                      type='int')
-    parser.add_option('-p', '--provider', dest='provider',
-                      help='Map provider in URL template form.')
-    parser.add_option('-n', '--page-number', dest='page_number',
-                      help='Page number.')
-    parser.add_option('-t', '--text', dest='text', default='',
-                      help='Page text.')
-    parser.add_option('-T', '--title', dest='title', default='',
-                      help='Title.')
+    parser.add_option(
+        '-s', '--paper-size', dest='paper_size', help='Choice of papers: %s.' % ', '.join(papers), choices=papers
+    )
+    parser.add_option(
+        '-o',
+        '--orientation',
+        dest='orientation',
+        help='Choice of orientations: %s.' % ', '.join(orientations),
+        choices=orientations,
+    )
+    parser.add_option(
+        '-l', '--layout', dest='layout', help='Choice of layouts: %s.' % ', '.join(layouts), choices=layouts
+    )
+    parser.add_option(
+        '-b', '--bounds', dest='bounds', help='Choice of bounds: north, west, south, east.', type='float', nargs=4
+    )
+    parser.add_option('-z', '--zoom', dest='zoom', help='Map zoom level.', type='int')
+    parser.add_option('-p', '--provider', dest='provider', help='Map provider in URL template form.')
+    parser.add_option('-n', '--page-number', dest='page_number', help='Page number.')
+    parser.add_option('-t', '--text', dest='text', default='', help='Page text.')
+    parser.add_option('-T', '--title', dest='title', default='', help='Title.')
 
     (opts, args) = parser.parse_args()
     if len(args) != 1:
         parser.print_help()
         exit(1)
 
-    sys.stdout.buffer.write(render_page(opts.paper_size, opts.orientation, opts.layout, args[0], opts.page_number, opts.bounds, opts.zoom, opts.provider, opts.text, opts.title))
+    sys.stdout.buffer.write(
+        render_page(
+            opts.paper_size,
+            opts.orientation,
+            opts.layout,
+            args[0],
+            opts.page_number,
+            opts.bounds,
+            opts.zoom,
+            opts.provider,
+            opts.text,
+            opts.title,
+        )
+    )

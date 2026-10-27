@@ -1,0 +1,15 @@
+# Tool configuration only. Dependencies are Debian packages (see Dockerfile).
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+src = [".", "decoder"]
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+pythonpath = [".", "decoder"]

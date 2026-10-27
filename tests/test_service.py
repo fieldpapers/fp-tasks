@@ -12,11 +12,11 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 from fastapi.testclient import TestClient
-from PIL import Image
-
 from helpers import TESTS, fetch, geotiff_corners, rasterize
-from service.app import app, provider_template
+from PIL import Image
 from test_render import CASES
+
+from service.app import app, provider_template
 
 SAMPLE = json.loads((TESTS / 'snapshots.json').read_text())[0]
 
@@ -59,9 +59,18 @@ def provider(tile_provider):
 def page_payload(name, provider):
     case = CASES[name]
     n, w, s, e = case['bounds']
-    return dict(slug=case['slug'], page_number=case['page'], bbox=[w, s, e, n], zoom=case['zoom'],
-                provider=provider, paper_size=case['paper'], orientation=case['orientation'],
-                layout=case['layout'], text=case.get('text', ''), title=case['title'])
+    return dict(
+        slug=case['slug'],
+        page_number=case['page'],
+        bbox=[w, s, e, n],
+        zoom=case['zoom'],
+        provider=provider,
+        paper_size=case['paper'],
+        orientation=case['orientation'],
+        layout=case['layout'],
+        text=case.get('text', ''),
+        title=case['title'],
+    )
 
 
 @pytest.fixture(scope='module')
@@ -77,16 +86,28 @@ def image_url(static):
 
 def sample_payload(image_url, **overrides):
     n, w, s, e = SAMPLE['bounds']
-    return {**dict(slug=SAMPLE['slug'], image_url=image_url, bbox=[w, s, e, n],
-                   paper_size=SAMPLE['paper'], orientation=SAMPLE['orientation'], layout=SAMPLE['layout']),
-            **overrides}
+    return {
+        **dict(
+            slug=SAMPLE['slug'],
+            image_url=image_url,
+            bbox=[w, s, e, n],
+            paper_size=SAMPLE['paper'],
+            orientation=SAMPLE['orientation'],
+            layout=SAMPLE['layout'],
+        ),
+        **overrides,
+    }
 
 
 def test_provider_template():
-    assert provider_template('https://{s}.tile.example.com/{z}/{x}/{y}@2x.png,') == \
-        'https://a.tile.example.com/{Z}/{X}/{Y}.png'
-    assert provider_template('https://{S}.example.com/{z}/{x}/{y}.png,https://tile.stamen.com/utm/{Z}/{X}/{Y}.png') == \
-        'https://a.example.com/{Z}/{X}/{Y}.png,https://tile.stamen.com/utm/{Z}/{X}/{Y}.png'
+    assert (
+        provider_template('https://{s}.tile.example.com/{z}/{x}/{y}@2x.png,')
+        == 'https://a.tile.example.com/{Z}/{X}/{Y}.png'
+    )
+    assert (
+        provider_template('https://{S}.example.com/{z}/{x}/{y}.png,https://tile.stamen.com/utm/{Z}/{X}/{Y}.png')
+        == 'https://a.example.com/{Z}/{X}/{Y}.png,https://tile.stamen.com/utm/{Z}/{X}/{Y}.png'
+    )
 
 
 def test_health(client):
@@ -103,8 +124,15 @@ def test_render_and_merge(client, static, provider, output_dir):
 
     case = CASES['letter-landscape-index']
     n, w, s, e = case['envelope']
-    rsp = client.post('/render_index', json=dict(page_payload('letter-landscape-index', provider),
-                                                 atlas_bbox=[w, s, e, n], cols=case['cols'], rows=case['rows']))
+    rsp = client.post(
+        '/render_index',
+        json=dict(
+            page_payload('letter-landscape-index', provider),
+            atlas_bbox=[w, s, e, n],
+            cols=case['cols'],
+            rows=case['rows'],
+        ),
+    )
     assert rsp.status_code == 200, rsp.text
     index_url = rsp.json()['pdf_url']
     assert index_url == prefix + 'atlases/1cr93fpr/1cr93fpr-index.pdf'

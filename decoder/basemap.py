@@ -16,7 +16,8 @@ http = urllib3.PoolManager(
     maxsize=4,
     headers={'User-Agent': 'Field Papers (http://fieldpapers.org/)'},
     timeout=urllib3.Timeout(connect=5, read=10),
-    retries=urllib3.Retry(total=2, backoff_factor=0.5, status_forcelist=[429, 500, 502, 503, 504]))
+    retries=urllib3.Retry(total=2, backoff_factor=0.5, status_forcelist=[429, 500, 502, 503, 504]),
+)
 
 
 class Map:
@@ -25,6 +26,7 @@ class Map:
     comma-separated tile URL templates with {X}, {Y}, and {Z} placeholders,
     drawn in order (e.g. a base map and an overlay).
     """
+
     def __init__(self, templates, north, west, south, east, zoom):
         self.templates = re.split(r',(?=https?://)', templates)
         self.north, self.south = north, south
@@ -49,7 +51,7 @@ class Map:
         img = Image.new('RGB', (self.width, self.height), 'white')
 
         # columns wrap around the antimeridian; rows past the poles stay blank
-        n = 2 ** self.zoom
+        n = 2**self.zoom
         cols = range(floor(self.left / TILE_SIZE), floor((self.left + self.width) / TILE_SIZE) + 1)
         rows = range(max(0, floor(self.top / TILE_SIZE)), min(n, floor((self.top + self.height) / TILE_SIZE) + 1))
         tiles = [(template, x, y) for template in self.templates for y in rows for x in cols]
@@ -71,9 +73,8 @@ def world_pixel(lat, lon, zoom):
     Web Mercator position (x, y) of a location at a zoom level, in pixels
     from the top left of the world.
     """
-    size = TILE_SIZE * 2 ** zoom
-    return ((lon + 180) / 360 * size,
-            (1 - log(tan(pi / 4 + radians(lat) / 2)) / pi) / 2 * size)
+    size = TILE_SIZE * 2**zoom
+    return ((lon + 180) / 360 * size, (1 - log(tan(pi / 4 + radians(lat) / 2)) / pi) / 2 * size)
 
 
 def fetch(template, x, y, zoom):

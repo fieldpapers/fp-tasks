@@ -1,5 +1,5 @@
-from matrixmath import Point
 from featuremath import Feature
+from matrixmath import Point
 
 #
 # points, clockwise from top-left
@@ -55,7 +55,7 @@ feature_f_landscape_ltr = Feature(point_E, point_F_landscape_ltr, point_G_landsc
 # feature tolerances and minimum size for featuremath.blobs2features()
 #
 ratio_tol = 0.10
-theta_tol = 0.09 # approx 5 degrees
+theta_tol = 0.09  # approx 5 degrees
 min_size = 800
 
 #
@@ -72,10 +72,10 @@ ratio_landscape_ltr = 1.456091
 # basic conversions between millimeters, points, and inches
 #
 mmppt = 0.352777778
-inppt = 1./72
+inppt = 1.0 / 72
 
-ptpin = 1./inppt
-ptpmm = 1./mmppt
+ptpin = 1.0 / inppt
+ptpmm = 1.0 / mmppt
 
 #
 # paper sizes in printed points

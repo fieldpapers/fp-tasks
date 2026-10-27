@@ -1,22 +1,23 @@
+from numpy import asarray, bincount, float64
 from PIL import Image
 from PIL.ImageOps import autocontrast
-
-from numpy import asarray, bincount, float64
 from scipy.ndimage import find_objects, gaussian_filter, label, maximum_filter, minimum_filter
 
+
 class Blob:
-    """ A dark dot: center in image pixels, size (area) in thumbnail pixels.
-    """
+    """A dark dot: center in image pixels, size (area) in thumbnail pixels."""
+
     def __init__(self, x, y, size):
         self.x = x
         self.y = y
         self.size = size
 
-def imgblobs(img):
-    """ Find dark dots in an image, such as printed registration marks.
 
-        Assumes blobs somewhere in the neighborhood of 0.25" or so
-        on a scan not much smaller than 8" on its smallest side.
+def imgblobs(img):
+    """Find dark dots in an image, such as printed registration marks.
+
+    Assumes blobs somewhere in the neighborhood of 0.25" or so
+    on a scan not much smaller than 8" on its smallest side.
     """
     mask = blob_mask(img)
     labels, _ = label(mask)
@@ -34,7 +35,7 @@ def imgblobs(img):
 
     blobs = []
 
-    for (i, (ys, xs)) in enumerate(find_objects(labels)):
+    for i, (ys, xs) in enumerate(find_objects(labels)):
         size = int(sizes[i + 1])
 
         if size / ((xs.stop - xs.start) * (ys.stop - ys.start)) < 0.7:
@@ -60,9 +61,9 @@ def imgblobs(img):
 
     return blobs
 
+
 def blob_mask(img):
-    """ Thumbnail of an image as a boolean array, true in dark, blob-like areas.
-    """
+    """Thumbnail of an image as a boolean array, true in dark, blob-like areas."""
     thumb = img.convert('L')
     thumb.thumbnail((1500, 1500), Image.LANCZOS)
 
@@ -70,7 +71,7 @@ def blob_mask(img):
     gray = gaussian_filter(gray, 0.5, truncate=2.0, mode='constant')
 
     # high-pass, see http://www.gimp.org/tutorials/Sketch_Effect/
-    gray = .5 * gray + .5 * (0xff - gaussian_filter(gray, 8, truncate=2.0, mode='constant'))
+    gray = 0.5 * gray + 0.5 * (0xFF - gaussian_filter(gray, 8, truncate=2.0, mode='constant'))
 
     mask = gray < 116
     return maximum_filter(minimum_filter(mask, 5, mode='nearest'), 5, mode='nearest')

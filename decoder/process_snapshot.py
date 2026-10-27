@@ -2,9 +2,8 @@
 
 import os
 import sys
-
-from optparse import OptionParser
 from io import BytesIO
+from optparse import OptionParser
 
 from PIL import Image
 
@@ -17,6 +16,7 @@ class SnapshotError(Exception):
     """
     The image can't be georeferenced (retrying won't help).
     """
+
     pass
 
 
@@ -31,13 +31,13 @@ def process_snapshot(input, bounds, paper, orientation, layout):
 
     # create_geotiff's 3-band nodata assumes RGB; uploads may be RGBA (e.g. a
     # PNG screenshot) or palette-based.
-    if image.mode != "RGB":
-        image = image.convert("RGB")
+    if image.mode != 'RGB':
+        image = image.convert('RGB')
 
     (north, west, south, east) = page_bounds(bounds, orientation, layout)
     blobs = imgblobs(image)
 
-    for (s2p, _paper, _orientation) in paper_matches(blobs):
+    for s2p, _paper, _orientation in paper_matches(blobs):
         print(_paper, _orientation, '--', s2p, file=sys.stderr)
 
         if (paper, orientation) != (_paper, _orientation):
@@ -59,15 +59,33 @@ def page_bounds(bounds, orientation, layout):
     (north, west, south, east) = bounds
 
     if layout == 'half-page' and orientation == 'landscape':
-        east += (east - west)
-        print('Adjusted', orientation, layout, 'bounds to %.6f, %.6f, %.6f, %.6f' % (north, west, south, east), file=sys.stderr)
+        east += east - west
+        print(
+            'Adjusted',
+            orientation,
+            layout,
+            'bounds to %.6f, %.6f, %.6f, %.6f' % (north, west, south, east),
+            file=sys.stderr,
+        )
 
     elif layout == 'half-page' and orientation == 'portrait':
-        south += (south - north)
-        print('Adjusted', orientation, layout, 'bounds to %.6f, %.6f, %.6f, %.6f' % (north, west, south, east), file=sys.stderr)
+        south += south - north
+        print(
+            'Adjusted',
+            orientation,
+            layout,
+            'bounds to %.6f, %.6f, %.6f, %.6f' % (north, west, south, east),
+            file=sys.stderr,
+        )
 
     else:
-        print('Kept', orientation, layout, 'bounds at %.6f, %.6f, %.6f, %.6f' % (north, west, south, east), file=sys.stderr)
+        print(
+            'Kept',
+            orientation,
+            layout,
+            'bounds at %.6f, %.6f, %.6f, %.6f' % (north, west, south, east),
+            file=sys.stderr,
+        )
 
     return (north, west, south, east)
 
@@ -82,18 +100,22 @@ if __name__ == '__main__':
     orientations = 'landscape portrait'.split()
     layouts = 'full-page half-page'.split()
 
-    parser.add_option('-s', '--paper-size', dest='paper_size',
-                      help='Choice of papers: %s.' % ', '.join(papers),
-                      choices=papers)
-    parser.add_option('-o', '--orientation', dest='orientation',
-                      help='Choice of orientations: %s.' % ', '.join(orientations),
-                      choices=orientations)
-    parser.add_option('-l', '--layout', dest='layout',
-                      help='Choice of layouts: %s.' % ', '.join(layouts),
-                      choices=layouts)
-    parser.add_option('-b', '--bounds', dest='bounds',
-                      help='Page bounds: north, west, south, east.',
-                      type='float', nargs=4)
+    parser.add_option(
+        '-s', '--paper-size', dest='paper_size', help='Choice of papers: %s.' % ', '.join(papers), choices=papers
+    )
+    parser.add_option(
+        '-o',
+        '--orientation',
+        dest='orientation',
+        help='Choice of orientations: %s.' % ', '.join(orientations),
+        choices=orientations,
+    )
+    parser.add_option(
+        '-l', '--layout', dest='layout', help='Choice of layouts: %s.' % ', '.join(layouts), choices=layouts
+    )
+    parser.add_option(
+        '-b', '--bounds', dest='bounds', help='Page bounds: north, west, south, east.', type='float', nargs=4
+    )
 
     (opts, args) = parser.parse_args()
     if args or not (opts.paper_size and opts.orientation and opts.bounds):

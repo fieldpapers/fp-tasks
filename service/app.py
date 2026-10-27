@@ -113,8 +113,9 @@ def decode_qr(upload: Upload):
 
 @app.post('/georeference')
 def georeference(snapshot: Georeference):
-    tif = process_snapshot(download(snapshot.image_url), snapshot.bbox,
-                           snapshot.paper_size, snapshot.orientation, snapshot.layout)
+    tif = process_snapshot(
+        download(snapshot.image_url), snapshot.bbox, snapshot.paper_size, snapshot.orientation, snapshot.layout
+    )
     return {'geotiff_url': persist(f'snapshots/{snapshot.slug}/field-paper-{snapshot.slug}.tiff', tif, 'image/tiff')}
 
 
@@ -136,9 +137,8 @@ def process_timed_out(request, e):
 
 def page_args(page):
     w, s, e, n = page.bbox
-    return ['-s', page.paper_size, '-l', page.layout, '-o', page.orientation,
-            '-b', n, w, s, e, '-z', page.zoom, '-p', provider_template(page.provider),
-            '-t', page.text, '-T', page.title]
+    args = ['-s', page.paper_size, '-l', page.layout, '-o', page.orientation, '-b', n, w, s, e, '-z', page.zoom]
+    return [*args, '-p', provider_template(page.provider), '-t', page.text, '-T', page.title]
 
 
 def provider_template(provider):
@@ -174,8 +174,9 @@ def run(args, input=None, timeout=60):
     kills any children it spawned too. Returns its stdout.
     """
     args = [str(a) for a in args]
-    proc = subprocess.Popen(args, cwd=DECODER, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE, start_new_session=True)
+    proc = subprocess.Popen(
+        args, cwd=DECODER, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True
+    )
     try:
         out, err = proc.communicate(input, timeout=timeout)
     except subprocess.TimeoutExpired:
@@ -218,8 +219,14 @@ def persist(key, body, content_type):
         return os.environ['STATIC_URI_PREFIX'].rstrip('/') + '/' + key
 
     bucket = os.environ['S3_BUCKET_NAME']
-    s3().put_object(Bucket=bucket, Key=key, Body=body, ACL='public-read',
-                    CacheControl='public,max-age=31536000', ContentType=content_type)
+    s3().put_object(
+        Bucket=bucket,
+        Key=key,
+        Body=body,
+        ACL='public-read',
+        CacheControl='public,max-age=31536000',
+        ContentType=content_type,
+    )
 
     # path-style, as bucket names may contain dots
     region = s3().meta.region_name
@@ -230,4 +237,5 @@ def persist(key, body, content_type):
 @lru_cache(maxsize=None)
 def s3():
     import boto3
+
     return boto3.client('s3')
