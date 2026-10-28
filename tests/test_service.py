@@ -127,7 +127,8 @@ def rasterize(pdf, dpi):
 
 def warp(tif, bbox, width=800):
     """
-    The part of a GeoTIFF within a bbox, in web mercator.
+    The part of a GeoTIFF within a bbox, in web mercator, with masked pixels
+    drawn grey (as in tests/expected/).
     """
     ds = gdal.Warp(
         '',
@@ -138,8 +139,25 @@ def warp(tif, bbox, width=800):
         outputBoundsSRS='EPSG:4326',
         width=width,
         height=0,
+        dstAlpha=True,
     )
-    return Image.fromarray(ds.ReadAsArray().transpose(1, 2, 0))
+    img = Image.fromarray(ds.ReadAsArray().transpose(1, 2, 0), 'RGBA')
+    return Image.alpha_composite(Image.new('RGBA', img.size, (153, 153, 153, 255)), img)
+
+
+def assert_cog(tif):
+    """
+    Check that a georeferenced GeoTIFF is a JPEG-compressed COG with overviews
+    and a mask.
+    """
+    info = gdal.Info(str(tif), format='json')
+    structure = info['metadata']['IMAGE_STRUCTURE']
+    assert structure['LAYOUT'] == 'COG'
+    assert 'JPEG' in structure['COMPRESSION']
+    assert len(info['bands']) == 3
+    for band in info['bands']:
+        assert band['overviews']
+        assert band['mask']['flags'] == ['PER_DATASET']
 
 
 def href(slug, page_number, bbox):
@@ -189,7 +207,9 @@ def test_round_trip(name, client, server, render, compare):
 
     rsp = client.post('/georeference', json=dict(page, slug=slug(name), image_url=image_url))
     assert rsp.status_code == 200, rsp.text
-    compare(f'{name}-georeferenced', warp(local(rsp.json()['geotiff_url']), page['bbox']), GEOREFERENCE_TOLERANCE)
+    tif = local(rsp.json()['geotiff_url'])
+    assert_cog(tif)
+    compare(f'{name}-georeferenced', warp(tif, page['bbox']), GEOREFERENCE_TOLERANCE)
 
 
 @pytest.mark.parametrize('snapshot', SNAPSHOTS, ids=[s['file'] for s in SNAPSHOTS])
@@ -215,7 +235,9 @@ def test_snapshot(snapshot, client, server, compare):
     )
     rsp = client.post('/georeference', json=payload)
     assert rsp.status_code == 200, rsp.text
-    compare(f'snapshot-{name}', warp(local(rsp.json()['geotiff_url']), bbox), GEOREFERENCE_TOLERANCE)
+    tif = local(rsp.json()['geotiff_url'])
+    assert_cog(tif)
+    compare(f'snapshot-{name}', warp(tif, bbox), GEOREFERENCE_TOLERANCE)
 
 
 def test_invalid_payload(client, provider):

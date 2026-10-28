@@ -29,7 +29,7 @@ def process_snapshot(input, bounds, paper, orientation, layout):
     image = Image.open(BytesIO(input))
     image.load()
 
-    # create_geotiff's 3-band nodata assumes RGB; uploads may be RGBA (e.g. a
+    # create_geotiff's JPEG compression needs RGB; uploads may be RGBA (e.g. a
     # PNG screenshot) or palette-based.
     if image.mode != 'RGB':
         image = image.convert('RGB')

@@ -33,7 +33,11 @@ def calculate_gcps(p2s, paper_width_pt, paper_height_pt, north, west, south, eas
 
 
 def create_geotiff(image, p2s, paper_width_pt, paper_height_pt, north, west, south, east):
-    """Return raw bytes of a GCP-based GeoTIFF for this decoded scan."""
+    """
+    Return raw bytes of a web mercator Cloud Optimized GeoTIFF for this scan.
+    The image content is JPEG compressed, and there is a separate mask band for
+    the alpha channel (since JPEG itself does not support transparency).
+    """
     gcps = calculate_gcps(p2s, paper_width_pt, paper_height_pt, north, west, south, east)
 
     handle, png_filename = mkstemp(prefix='geotiff-', suffix='.png')
@@ -57,12 +61,12 @@ def create_geotiff(image, p2s, paper_width_pt, paper_height_pt, north, west, sou
         gdal.Warp(
             tif_filename,  # destination
             vrt_filename,  # source
-            format='GTiff',
+            format='COG',
             srcSRS='EPSG:4326',
             dstSRS='EPSG:3857',
             tps=True,
-            dstNodata='153 153 153',
-            creationOptions=['COMPRESS=deflate', 'TILED=yes'],
+            dstAlpha=True,
+            creationOptions=['COMPRESS=JPEG', 'QUALITY=85'],
         )
 
         return open(tif_filename, 'rb').read()
