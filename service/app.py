@@ -193,9 +193,23 @@ def run(args, input=None, timeout=60):
 def download(url):
     """
     Fetch a URL. S3 URLs are fetched with credentials, since uploaded snapshot
-    images are not public.
+    images are not public. With PERSIST=local, URLs under STATIC_URI_PREFIX
+    are read from STATIC_PATH, since that prefix is meant for browsers and
+    may not be reachable from here (e.g. http://127.0.0.1:3000 in a
+    container).
     """
     uri = urlparse(url)
+
+    if os.environ.get('PERSIST') == 'local':
+        prefix = os.environ['STATIC_URI_PREFIX'].rstrip('/') + '/'
+        if url.startswith(prefix):
+            root = Path(os.environ['STATIC_PATH']).resolve()
+            # Paperclip URLs carry a ?<timestamp> cache buster
+            key = unquote(url[len(prefix) :].split('?', 1)[0])
+            path = (root / key).resolve()
+            if not path.is_relative_to(root):
+                raise ValueError(f'{url} is outside STATIC_PATH')
+            return path.read_bytes()
 
     if re.search(r's3.*\.amazonaws\.com', uri.hostname):
         if re.match(r'.+\.s3.*\.amazonaws\.com', uri.hostname):
