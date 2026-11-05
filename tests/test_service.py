@@ -6,6 +6,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import pytest
+from conftest import rms
 from osgeo import gdal
 from PIL import Image
 
@@ -19,6 +20,8 @@ ACTUAL = TESTS / 'actual'
 # Max RMS difference (0-255) from the expected images
 RENDER_TOLERANCE = 4
 GEOREFERENCE_TOLERANCE = 8
+MERGE_TOLERANCE = 1
+MERGE_DPI = 50
 
 # bboxes and zooms from real atlases, so that their shapes match what fp-web
 # generates
@@ -182,13 +185,25 @@ def test_render_index(render, compare):
 
 
 def test_merge_pages(client, render):
-    rsp = client.post('/merge_pages', json=dict(slug='index', pdf_urls=[render('index'), render('letter-portrait')]))
+    """
+    Merging keeps every page, in order, with its size and content unchanged.
+    """
+    names = ['index', 'letter-portrait', 'a4-landscape', 'a3-portrait']
+    rsp = client.post('/merge_pages', json=dict(slug='index', pdf_urls=[render(name) for name in names]))
     assert rsp.status_code == 200, rsp.text
     url = rsp.json()['pdf_url']
     assert url.endswith('actual/atlases/index/atlas-index.pdf')
 
-    pages = rasterize(local(url), 10)
-    assert [p.width > p.height for p in pages] == [True, False]
+    subprocess.run(['qpdf', '--check', local(url)], check=True, capture_output=True)
+
+    merged = rasterize(local(url), MERGE_DPI)
+    inputs = [page for name in names for page in rasterize(local(render(name)), MERGE_DPI)]
+    assert len(merged) == len(inputs)
+
+    # rasterized at the same dpi, so equal sizes mean equal page sizes
+    assert [p.size for p in merged] == [p.size for p in inputs]
+    diffs = [round(rms(actual, expected), 2) for actual, expected in zip(merged, inputs, strict=True)]
+    assert max(diffs) < MERGE_TOLERANCE, f'merged pages differ from their inputs (rms {diffs})'
 
 
 @pytest.mark.parametrize('name', PAGES)

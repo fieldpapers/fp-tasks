@@ -101,7 +101,8 @@ def merge_pages(merge: Merge):
             files.append(Path(tmp) / f'page-{i}.pdf')
             files[-1].write_bytes(data)
 
-        pdf = run(['gs', '-q', '-sDEVICE=pdfwrite', '-o', '-', *files], timeout=120)
+        # qpdf copies the pages without interpreting their content
+        pdf = run(['qpdf', '--warning-exit-0', '--empty', '--pages', *files, '--', '-'], timeout=120)
 
     return {'pdf_url': persist(f'atlases/{merge.slug}/atlas-{merge.slug}.pdf', pdf, 'application/pdf')}
 
