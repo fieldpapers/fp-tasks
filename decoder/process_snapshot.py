@@ -2,19 +2,12 @@
 
 import os
 import sys
-from io import BytesIO
 from optparse import OptionParser
-
-from PIL import Image, UnidentifiedImageError
 
 from decode import get_paper_size, paper_matches
 from geoutils import create_geotiff
 from imagemath import imgblobs
-
-# Allowed upload formats. Pillow supports a lot more than this (some through
-# external programs like EPS via Ghostscript), so this limits what untrusted
-# input can reach.
-FORMATS = ['JPEG', 'PNG', 'TIFF']
+from uploads import UploadError, open_upload
 
 
 class SnapshotError(Exception):
@@ -32,9 +25,9 @@ def process_snapshot(input, bounds, paper, orientation, layout):
     atlas's. Returns GeoTIFF bytes.
     """
     try:
-        image = Image.open(BytesIO(input), formats=FORMATS)
-    except UnidentifiedImageError:
-        raise SnapshotError('not a JPEG, PNG, or TIFF image') from None
+        image = open_upload(input)
+    except UploadError as e:
+        raise SnapshotError(e) from None
     image.load()
 
     # create_geotiff's JPEG compression needs RGB; uploads may be RGBA (e.g. a

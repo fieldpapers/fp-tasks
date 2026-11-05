@@ -12,6 +12,9 @@ from PIL import Image, UnidentifiedImageError
 
 TILE_SIZE = 256
 
+MAX_TILE_BYTES = 4 * 1024 * 1024  # 4 MiB
+MAX_TILE_PIXELS = 1024  # side length
+
 http = urllib3.PoolManager(
     maxsize=4,
     headers={'User-Agent': 'Field Papers (http://fieldpapers.org/)'},
@@ -82,7 +85,12 @@ def fetch(template, x, y, zoom):
     An RGBA tile image, or None if the server has no tile there.
     """
     url = template.replace('{X}', str(x)).replace('{Y}', str(y)).replace('{Z}', str(zoom))
-    rsp = http.request('GET', url)
+    rsp = http.request('GET', url, preload_content=False)
+    data = rsp.read(MAX_TILE_BYTES + 1)
+    if len(data) > MAX_TILE_BYTES:
+        rsp.close()
+        raise RuntimeError(f'{url}: response is larger than {MAX_TILE_BYTES} bytes')
+    rsp.release_conn()
 
     if rsp.status in (204, 404):
         return None
@@ -90,6 +98,11 @@ def fetch(template, x, y, zoom):
         raise RuntimeError(f'{url}: HTTP {rsp.status}')
 
     try:
-        return Image.open(BytesIO(rsp.data), formats=['PNG', 'JPEG']).convert('RGBA')
+        img = Image.open(BytesIO(data), formats=['PNG', 'JPEG'])
     except UnidentifiedImageError:
         raise RuntimeError(f'{url}: not a PNG or JPEG image') from None
+
+    if img.width > MAX_TILE_PIXELS or img.height > MAX_TILE_PIXELS:
+        raise RuntimeError(f'{url}: tile is too large ({img.width}x{img.height})')
+
+    return img.convert('RGBA')
