@@ -8,7 +8,7 @@ from io import BytesIO
 from math import floor, log, pi, radians, tan
 
 import urllib3
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 TILE_SIZE = 256
 
@@ -89,4 +89,7 @@ def fetch(template, x, y, zoom):
     if rsp.status != 200:
         raise RuntimeError(f'{url}: HTTP {rsp.status}')
 
-    return Image.open(BytesIO(rsp.data)).convert('RGBA')
+    try:
+        return Image.open(BytesIO(rsp.data), formats=['PNG', 'JPEG']).convert('RGBA')
+    except UnidentifiedImageError:
+        raise RuntimeError(f'{url}: not a PNG or JPEG image') from None

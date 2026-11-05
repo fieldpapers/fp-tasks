@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Print the URL in the QR code of an image read from stdin. Exits with
-EX_DATAERR if there isn't one.
+EX_DATAERR if there isn't one, or the image isn't a JPEG, PNG, or TIFF.
 """
 
 import os
@@ -10,7 +10,10 @@ from io import BytesIO
 from urllib.parse import unquote
 
 import zxingcpp
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
+
+# Allowed upload formats (should match what's in process_snapshot.py)
+FORMATS = ['JPEG', 'PNG', 'TIFF']
 
 # Small, blurry photos (e.g. from a phone at arm's length) sometimes only
 # decode when scaled up; large, noisy ones when scaled down.
@@ -32,7 +35,13 @@ def read_qr(image):
 
 
 if __name__ == '__main__':
-    href = read_qr(Image.open(BytesIO(sys.stdin.buffer.read())).convert('L'))
+    try:
+        image = Image.open(BytesIO(sys.stdin.buffer.read()), formats=FORMATS)
+    except UnidentifiedImageError:
+        print('not a JPEG, PNG, or TIFF image', file=sys.stderr)
+        sys.exit(os.EX_DATAERR)
+
+    href = read_qr(image.convert('L'))
     if href is None:
         print('no QR code found', file=sys.stderr)
         sys.exit(os.EX_DATAERR)
